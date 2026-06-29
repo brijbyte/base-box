@@ -18,7 +18,7 @@ import {
 import { createEditor } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
 
-const fs = new MemFS(filesFromUrl() ?? SAMPLE);
+const fs = new MemFS((await filesFromUrl()) ?? SAMPLE);
 
 const els = {
   tree: document.querySelector<HTMLDivElement>('#tree')!,
@@ -140,7 +140,7 @@ onSystemThemeChange(() => {
 });
 
 els.share.addEventListener('click', async () => {
-  const url = `${location.origin}${location.pathname}?files=${encodeFiles(fs.toJSON())}`;
+  const url = `${location.origin}${location.pathname}?files=${await encodeFiles(fs.toJSON())}`;
   await navigator.clipboard?.writeText(url).catch(() => {});
   history.replaceState(null, '', url);
   setStatus('share URL copied');

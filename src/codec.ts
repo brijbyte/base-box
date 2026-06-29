@@ -15,16 +15,32 @@ function base64UrlToBytes(b64url: string): Uint8Array {
   return out;
 }
 
-/** Encode a FileMap into a URL-safe base64 string for `?files=`. */
-export function encodeFiles(files: FileMap): string {
-  const json = JSON.stringify(files);
-  return bytesToBase64Url(new TextEncoder().encode(json));
+// Raw-deflate through the native (de)compression streams (Safari 16.4+).
+async function pipe(
+  bytes: Uint8Array,
+  stream: GenericTransformStream
+): Promise<Uint8Array<ArrayBuffer>> {
+  const out = new Blob([bytes as BlobPart]).stream().pipeThrough(stream);
+  return new Uint8Array(await new Response(out).arrayBuffer());
 }
 
-/** Decode `?files=` back into a FileMap. Returns null on failure. */
-export function decodeFiles(param: string): FileMap | null {
+const deflate = (bytes: Uint8Array) =>
+  pipe(bytes, new CompressionStream('deflate-raw'));
+const inflate = (bytes: Uint8Array) =>
+  pipe(bytes, new DecompressionStream('deflate-raw'));
+
+/** Encode a FileMap into a deflate-compressed URL-safe base64 string for `?files=`. */
+export async function encodeFiles(files: FileMap): Promise<string> {
+  const json = new TextEncoder().encode(JSON.stringify(files));
+  return bytesToBase64Url(await deflate(json));
+}
+
+/** Decode a deflate-compressed `?files=` back into a FileMap. Returns null on failure. */
+export async function decodeFiles(param: string): Promise<FileMap | null> {
   try {
-    const json = new TextDecoder().decode(base64UrlToBytes(param));
+    const json = new TextDecoder().decode(
+      await inflate(base64UrlToBytes(param))
+    );
     const obj = JSON.parse(json);
     if (obj && typeof obj === 'object') return obj as FileMap;
     return null;
@@ -34,7 +50,9 @@ export function decodeFiles(param: string): FileMap | null {
 }
 
 /** Read `?files=` from a URL's search string. */
-export function filesFromUrl(search: string = location.search): FileMap | null {
+export function filesFromUrl(
+  search: string = location.search
+): Promise<FileMap | null> {
   const param = new URLSearchParams(search).get('files');
-  return param ? decodeFiles(param) : null;
+  return param ? decodeFiles(param) : Promise.resolve(null);
 }

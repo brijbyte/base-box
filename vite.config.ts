@@ -14,7 +14,7 @@ function serviceWorkerDev(): Plugin {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (req.url?.split('?')[0] !== '/sw.js') return next();
+        if (req.originalUrl?.split('?')[0] !== '/sw.js') return next();
         try {
           const result = await server.transformRequest(SW_ENTRY);
           if (!result) return next();
@@ -37,7 +37,10 @@ export default defineConfig({
     serviceWorkerDev(),
   ],
   build: {
-    rollupOptions: {
+    // es2022 enables top-level await (main.ts boots via `await filesFromUrl()`);
+    // consistent with the Safari 16.4+ floor already required for import maps (§6).
+    target: 'es2022',
+    rolldownOptions: {
       // Two entries: the host app (index.html) and the SW. The SW must land at the
       // dist root as `sw.js` so its default registration scope is `/`.
       input: { main: 'index.html', sw: 'src/sw.ts' },

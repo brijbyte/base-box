@@ -24,7 +24,7 @@ test('renders React + TS sample via esbuild transform + esm.sh import map (WebKi
 test('strips TS types & resolves relative imports (no network)', async ({
   page,
 }) => {
-  const files = encodeFiles({
+  const files = await encodeFiles({
     'index.html': `<!doctype html><html><head></head><body><div id="o"></div>
 <script type="module" src="./src/main.ts"></script></body></html>`,
     'src/main.ts': `import { sum } from "./math";
