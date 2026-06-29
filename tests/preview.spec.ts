@@ -500,3 +500,32 @@ test('LSP: hover shows inferred type info', async ({ page }) => {
     { timeout: LSP_TIMEOUT }
   );
 });
+
+test('LSP: resolves react/jsx-runtime types from range deps (no phantom errors)', async ({
+  page,
+}) => {
+  // `@types/react` must resolve so JSX type-checks. Range versions (^18) only work
+  // because non-exact pins fall back to jsdelivr's `latest` resolution (see ts-worker).
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/App.tsx"></script></body></html>`,
+    'src/App.tsx': `export function App() {
+  const bad: number = "nope"; // the only error: string→number
+  return <div className="x">{bad}</div>;
+}
+`,
+    'package.json': `{"dependencies":{"react":"^18.3.1"},"devDependencies":{"@types/react":"^18"}}`,
+  });
+  await page.goto(`/?files=${files}`);
+  await openTsFile(page, 'App.tsx');
+
+  // Server ran → the deliberate error shows; JSX itself must NOT add errors (it would if
+  // react/jsx-runtime were unresolved), so the count settles at exactly one.
+  const errors = page.locator('#editor .cm-lintRange-error');
+  await expect(errors.first()).toBeVisible({ timeout: LSP_TIMEOUT });
+  await expect(errors).toHaveCount(1);
+  await errors.first().hover();
+  await expect(page.locator('.cm-tooltip-lint')).toContainText(
+    "Type 'string' is not assignable to type 'number'"
+  );
+});

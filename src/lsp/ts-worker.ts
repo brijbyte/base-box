@@ -57,6 +57,16 @@ function parseDeps(pkgJson?: string): Record<string, string> {
   }
 }
 
+/**
+ * Pin a dep to an EXACT version for jsdelivr, else undefined → it resolves `latest`.
+ * The jsdelivr FS only resolves the tag `latest`; a range like `^18` is sent verbatim
+ * to `/flat` and 404s (and TS then can't find e.g. `react/jsx-runtime`).
+ */
+function exactVersion(range?: string): string | undefined {
+  const v = range?.replace(/^[\^~]/, '');
+  return v && /^\d+\.\d+\.\d+/.test(v) ? v : undefined;
+}
+
 /** Strip a leading slash so `/src/App.tsx` matches the `src/App.tsx` map keys. */
 const relOf = (uri: URI) => uri.path.replace(/^\/+/, '');
 
@@ -134,8 +144,7 @@ function startLsp(port: MessagePort) {
     // Pin `typescript` (lib.d.ts) to our engine; other pkgs follow package.json (else latest).
     const npmFs = createNpmFileSystem(
       undefined,
-      (pkg) =>
-        pkg === 'typescript' ? TS_VERSION : deps[pkg]?.replace(/^[\^~]/, ''),
+      (pkg) => (pkg === 'typescript' ? TS_VERSION : exactVersion(deps[pkg])),
       undefined
     );
     server.fileSystem.install('file', compositeFs(npmFs));
