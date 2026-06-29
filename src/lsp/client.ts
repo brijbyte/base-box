@@ -1,6 +1,7 @@
 // Main-thread side of the TS language server: spawns the worker, bridges CodeMirror's
 // LSP client (string JSON-RPC) to the worker's MessagePort (structured-clone objects),
 // and exposes a per-file editor extension + a file-sync hook.
+import * as Comlink from 'comlink';
 import {
   LSPClient,
   languageServerSupport,
@@ -9,6 +10,7 @@ import {
 } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import type { FileMap } from '../types';
+import type { TsWorkerApi } from './ts-worker';
 
 const ROOT_URI = 'file:///';
 const LSP_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs']);
@@ -46,11 +48,10 @@ export function createLspClient(files: FileMap): LspClient {
   const worker = new Worker(new URL('./ts-worker.ts', import.meta.url), {
     type: 'module',
   });
-  // LSP runs over a dedicated port; `self` in the worker stays free for file sync.
+  const api = Comlink.wrap<TsWorkerApi>(worker);
+  // LSP runs over a dedicated port; Comlink owns `self`, so we hand the port to init().
   const channel = new MessageChannel();
-  worker.postMessage({ type: 'init', port: channel.port2, files }, [
-    channel.port2,
-  ]);
+  void api.init(files, Comlink.transfer(channel.port2, [channel.port2]));
 
   const handlers = new Set<(msg: string) => void>();
   // Worker writes structured objects; CM expects JSON strings (and vice-versa).
@@ -76,6 +77,6 @@ export function createLspClient(files: FileMap): LspClient {
       lspSupportsPath(path)
         ? languageServerSupport(client, fileUri(path), languageId(path))
         : [],
-    sync: (next) => worker.postMessage({ type: 'sync', files: next }),
+    sync: (next) => void api.sync(next),
   };
 }

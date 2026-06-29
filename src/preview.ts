@@ -1,4 +1,13 @@
+import * as Comlink from 'comlink';
 import type { FileMap } from './types';
+
+export type HotResult = { reload: boolean; boundaries: string[] };
+
+/** The RPC surface the Service Worker exposes (implemented in sw.ts). */
+export interface SwApi {
+  loadFiles(files: FileMap): number;
+  updateFile(path: string, content: string): HotResult | Promise<HotResult>;
+}
 
 let registration: ServiceWorkerRegistration | null = null;
 
@@ -25,43 +34,48 @@ function targetWorker(): ServiceWorker | null {
   return navigator.serviceWorker.controller ?? registration?.active ?? null;
 }
 
+// Comlink endpoint for the SW: post to whichever worker serves /__fs/* right now, and
+// receive replies on navigator.serviceWorker (the SW posts each reply back to its sender).
+const swEndpoint: Comlink.Endpoint = {
+  postMessage: (message, transfer) =>
+    targetWorker()?.postMessage(message, (transfer ?? []) as Transferable[]),
+  addEventListener: (type, listener) =>
+    navigator.serviceWorker.addEventListener(type, listener as EventListener),
+  removeEventListener: (type, listener) =>
+    navigator.serviceWorker.removeEventListener(
+      type,
+      listener as EventListener
+    ),
+};
+
+const sw = Comlink.wrap<SwApi>(swEndpoint);
+
+/** Reject if `p` doesn't settle within `ms`. */
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+    p.then(
+      (v) => (clearTimeout(timer), resolve(v)),
+      (e) => (clearTimeout(timer), reject(e))
+    );
+  });
+}
+
 /**
  * Push the FileMap to the serving SW and wait for an ack. Retries because a
  * just-activated worker may not be listening for the first message yet.
  */
 export async function syncFiles(files: FileMap, retries = 3): Promise<number> {
   for (let attempt = 0; ; attempt++) {
-    const worker = targetWorker();
-    if (!worker) throw new Error('No active service worker to sync with.');
     try {
-      return await postOnce(worker, files, 4000);
+      if (!targetWorker())
+        throw new Error('No active service worker to sync with.');
+      return await withTimeout(sw.loadFiles(files), 4000, 'SW sync');
     } catch (err) {
       if (attempt >= retries) throw err;
     }
   }
 }
-
-function postOnce(
-  worker: ServiceWorker,
-  files: FileMap,
-  timeout: number
-): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const channel = new MessageChannel();
-    const timer = setTimeout(
-      () => reject(new Error('SW sync timed out')),
-      timeout
-    );
-    channel.port1.onmessage = (e) => {
-      clearTimeout(timer);
-      if (e.data?.type === 'files-loaded') resolve(e.data.count as number);
-      else reject(new Error('Unexpected SW reply'));
-    };
-    worker.postMessage({ type: 'load-files', files }, [channel.port2]);
-  });
-}
-
-export type HotResult = { reload: boolean; boundaries: string[] };
 
 /**
  * Push a single-file content edit to the SW for HMR. The SW broadcasts a hot update to
@@ -72,25 +86,8 @@ export async function updateFile(
   content: string,
   timeout = 4000
 ): Promise<HotResult> {
-  const worker = targetWorker();
-  if (!worker) throw new Error('No active service worker to update.');
-  return new Promise((resolve, reject) => {
-    const channel = new MessageChannel();
-    const timer = setTimeout(
-      () => reject(new Error('SW update timed out')),
-      timeout
-    );
-    channel.port1.onmessage = (e) => {
-      clearTimeout(timer);
-      if (e.data?.type === 'file-updated')
-        resolve({
-          reload: !!e.data.reload,
-          boundaries: e.data.boundaries ?? [],
-        });
-      else reject(new Error('Unexpected SW reply'));
-    };
-    worker.postMessage({ type: 'update-file', path, content }, [channel.port2]);
-  });
+  if (!targetWorker()) throw new Error('No active service worker to update.');
+  return withTimeout(sw.updateFile(path, content), timeout, 'SW update');
 }
 
 /** Re-sync + refresh whenever a new SW takes control (it starts with an empty FS). */

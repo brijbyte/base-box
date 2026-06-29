@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import './polyfill';
+import * as Comlink from 'comlink';
 import * as esbuild from 'esbuild-wasm/esm/browser.js';
 import esbuildWasmUrl from 'esbuild-wasm/esbuild.wasm?url';
 import { init as initLexer, parse as parseImports } from 'es-module-lexer';
@@ -17,6 +18,8 @@ import {
   HMR_CLIENT_JS,
   type ModuleGraph,
 } from './hmr';
+import type { HmrMessage } from './messages';
+import type { SwApi, HotResult } from './preview';
 import type { FileMap } from './types';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
@@ -229,35 +232,28 @@ async function buildImportMap(): Promise<Record<string, string>> {
 sw.addEventListener('install', () => sw.skipWaiting());
 sw.addEventListener('activate', (e) => e.waitUntil(sw.clients.claim()));
 
-sw.addEventListener('message', (event) => {
-  const data = event.data;
-  if (data?.type === 'load-files') {
-    fs = new MemFS(data.files as FileMap);
+// The RPC the host calls (preview.ts). Comlink owns the SW `message` event via the
+// endpoint below; replies route back to the exact requesting client (see swEndpoint).
+const api: SwApi = {
+  loadFiles(files: FileMap): number {
+    fs = new MemFS(files);
     cache.clear();
     cssCache.clear();
     graph.clear();
     accepts.clear();
     stamps.clear();
-    event.ports[0]?.postMessage({
-      type: 'files-loaded',
-      count: fs.list().length,
-    });
-  } else if (data?.type === 'update-file') {
-    event.waitUntil(
-      handleUpdate(data.path as string, data.content as string, event)
-    );
-  }
-});
+    return fs.list().length;
+  },
+  updateFile(path: string, content: string): Promise<HotResult> {
+    return handleUpdate(path, content);
+  },
+};
 
 /**
  * A single-file content edit: update the FS, bump stamps along the dirty chain, then
  * either broadcast a hot update to the preview client(s) or tell the editor to reload.
  */
-async function handleUpdate(
-  path: string,
-  content: string,
-  event: ExtendableMessageEvent
-): Promise<void> {
+async function handleUpdate(path: string, content: string): Promise<HotResult> {
   fs.write(path, content);
   cache.clear(); // outputs embed dep stamps; cheapest correct invalidation is clear-all
   cssCache.clear();
@@ -268,7 +264,7 @@ async function handleUpdate(
   for (const p of dirty) stamps.set(p, clock);
 
   if (!reload) {
-    const payload = {
+    const payload: HmrMessage = {
       type: 'hmr',
       boundaries: boundaries.map((p) => ({
         path: p,
@@ -278,8 +274,42 @@ async function handleUpdate(
     for (const client of await sw.clients.matchAll({ type: 'window' }))
       client.postMessage(payload);
   }
-  event.ports[0]?.postMessage({ type: 'file-updated', reload, boundaries });
+  return { reload, boundaries };
 }
+
+// Comlink endpoint that preserves the two robustness properties of the old hand-rolled
+// protocol: (1) reply to the *exact* client that sent each request (keyed by Comlink's
+// message id) — works even before the page is controlled; (2) hold the worker alive with
+// waitUntil from request-receipt until the reply is posted.
+const replyTo = new Map<string | number, Client>();
+const keepAlive = new Map<string | number, () => void>();
+
+const swEndpoint: Comlink.Endpoint = {
+  addEventListener: (_type, listener) => {
+    sw.addEventListener('message', (event) => {
+      const id = (event.data as { id?: string | number })?.id;
+      if (id != null && event.source) {
+        replyTo.set(id, event.source as Client);
+        event.waitUntil(
+          new Promise<void>((resolve) => keepAlive.set(id, resolve))
+        );
+      }
+      (listener as EventListener)(event as unknown as Event);
+    });
+  },
+  removeEventListener: () => {},
+  postMessage: (message, transfer) => {
+    const id = (message as { id?: string | number })?.id;
+    if (id == null) return;
+    const client = replyTo.get(id);
+    replyTo.delete(id);
+    keepAlive.get(id)?.();
+    keepAlive.delete(id);
+    client?.postMessage(message, (transfer ?? []) as Transferable[]);
+  },
+};
+
+Comlink.expose(api, swEndpoint);
 
 sw.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);

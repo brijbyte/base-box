@@ -1,5 +1,6 @@
 // HMR support: module graph + propagation (SW side) and the client runtime (iframe side).
 // Modeled on Vite dev HMR — re-import accept boundaries instead of reloading the page.
+import { PREVIEW_MSG } from './messages';
 
 /** importer path -> set of its resolved relative deps (built during rewriteSpecifiers). */
 export type ModuleGraph = Map<string, Set<string>>;
@@ -73,9 +74,6 @@ export function planUpdate(
 export function hmrPreamble(path: string): string {
   return `import {createHotContext as __bbhot} from "/__fs/@hmr";import.meta.hot=__bbhot(${JSON.stringify(path)});\n`;
 }
-
-/** postMessage `source` tag for preview → host error reports (filtered on the host). */
-export const PREVIEW_MSG = 'base-box-preview';
 
 /**
  * A stand-in module returned when esbuild/lightningcss fail to transform a file: it posts

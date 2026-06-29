@@ -7,6 +7,7 @@
 // Two channels share this worker:
 //   - LSP JSON-RPC runs over a dedicated MessagePort (so `self` stays free).
 //   - File sync ("init"/"sync") arrives on `self.onmessage`.
+import * as Comlink from 'comlink';
 import {
   BrowserMessageReader,
   BrowserMessageWriter,
@@ -44,8 +45,25 @@ const DEFAULT_TSCONFIG = JSON.stringify({
 const F_FILE = 1 satisfies FileType;
 const F_DIR = 2 satisfies FileType;
 
+// Ambient module decls for imports the bundler resolves but TS can't type on its own
+// (CSS modules, plain CSS side-effects). Injected into the project so the server stops
+// flagging `import styles from './x.module.css'`. A user-supplied file of the same name wins.
+const ENV_DTS_PATH = 'base-box-env.d.ts';
+const ENV_DTS = `declare module '*.module.css' {
+  const classes: { readonly [key: string]: string };
+  export default classes;
+}
+declare module '*.css';
+`;
+
 let files: Record<string, string> = {};
 let deps: Record<string, string> = {};
+
+/** Adopt a fresh file map (+ ambient decls) and re-derive deps from package.json. */
+function setFiles(next: Record<string, string> | undefined) {
+  files = { [ENV_DTS_PATH]: ENV_DTS, ...next };
+  deps = parseDeps(files['package.json']);
+}
 
 /** Merge dependencies + devDependencies from a package.json string (versions only). */
 function parseDeps(pkgJson?: string): Record<string, string> {
@@ -161,16 +179,20 @@ function startLsp(port: MessagePort) {
   connection.listen();
 }
 
-self.onmessage = (e: MessageEvent) => {
-  const d = e.data;
-  if (d?.type === 'init') {
-    files = d.files ?? {};
-    deps = parseDeps(files['package.json']);
-    startLsp(d.port as MessagePort);
-  } else if (d?.type === 'sync') {
-    files = d.files ?? {};
-    deps = parseDeps(files['package.json']);
-    // Non-open files changed (add/rename/delete) → re-validate open docs.
+// Comlink owns `self` messaging; the LSP runs on the separate `port` passed to init().
+const workerApi = {
+  /** Adopt the initial file map and boot the LSP over the transferred MessagePort. */
+  init(initFiles: Record<string, string> | undefined, port: MessagePort) {
+    setFiles(initFiles);
+    startLsp(port);
+  },
+  /** Re-sync project files after a structural edit, then re-validate open docs. */
+  sync(nextFiles: Record<string, string> | undefined) {
+    setFiles(nextFiles);
     serverRef?.languageFeatures.requestRefresh(false).catch(() => {});
-  }
+  },
 };
+
+export type TsWorkerApi = typeof workerApi;
+
+Comlink.expose(workerApi);

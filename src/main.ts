@@ -10,19 +10,31 @@ import {
   onControllerChange,
 } from './preview';
 import { initTheme, cycleTheme, type Theme } from './theme';
+import { onPreviewError } from './messages';
 import { createEditor } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
-import { createLspClient, lspSupportsPath, type LspClient } from './lsp/client';
+import type { LspClient } from './lsp/client'; // type-only: no runtime import
 
 const fs = new MemFS((await filesFromUrl()) ?? SAMPLE);
 
-// TypeScript language server (worker): autocomplete, diagnostics, hover.
-// Spawned lazily on the first TS/JS file opened — it pulls TS from a CDN, so a
-// project that never opens a code file (or only HTML/CSS) never pays for it.
+// TypeScript language server (worker): autocomplete, diagnostics, hover. The whole
+// client module (and @codemirror/lsp-client) is dynamically imported on the first
+// TS/JS file opened, so projects that only touch HTML/CSS never load any of it.
+const LSP_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs']);
+const lspSupportsPath = (p: string) =>
+  LSP_EXTS.has(p.slice(p.lastIndexOf('.') + 1).toLowerCase());
+
 let lsp: LspClient | null = null;
-function ensureLsp(): LspClient {
-  if (!lsp) lsp = createLspClient(fs.toJSON());
-  return lsp;
+let lspLoading: Promise<LspClient> | null = null;
+function ensureLsp(): Promise<LspClient> {
+  if (lsp) return Promise.resolve(lsp);
+  if (!lspLoading) {
+    lspLoading = import('./lsp/client').then(({ createLspClient }) => {
+      lsp = createLspClient(fs.toJSON());
+      return lsp;
+    });
+  }
+  return lspLoading;
 }
 
 const els = {
@@ -66,7 +78,7 @@ const editor = createEditor(
   },
   {
     lspSupport: (path) =>
-      lspSupportsPath(path) ? ensureLsp().support(path) : [],
+      lspSupportsPath(path) ? ensureLsp().then((c) => c.support(path)) : [],
   }
 );
 
@@ -137,9 +149,7 @@ function showPreviewError(kind: string, message: string, file?: string) {
   els.previewError.hidden = false;
 }
 els.errorDismiss.addEventListener('click', clearPreviewError);
-window.addEventListener('message', (e: MessageEvent) => {
-  const d = e.data;
-  if (!d || d.source !== 'base-box-preview' || d.type !== 'error') return;
+onPreviewError((d) => {
   // WebKit stacks omit the message line, so show the message and append the stack.
   const msg = d.message || 'Unknown error';
   const body =
