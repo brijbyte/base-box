@@ -5,6 +5,7 @@ import { SAMPLE } from './sample';
 import {
   registerServiceWorker,
   syncFiles,
+  updateFile,
   refreshPreview,
   onControllerChange,
 } from './preview';
@@ -34,14 +35,31 @@ let panel: FileTreePanel;
 const themeLabel = (t: Theme) => `Theme: ${t[0].toUpperCase()}${t.slice(1)}`;
 const firstFile = () => fs.list()[0] ?? '';
 
-// Debounced write+rebuild on user edits.
+// Debounced write + hot update on user edits.
 let debounce: ReturnType<typeof setTimeout>;
 const editor = createEditor(els.editor, (value) => {
   if (!current) return;
   fs.write(current, value);
+  const path = current;
   clearTimeout(debounce);
-  debounce = setTimeout(rebuild, 300);
+  debounce = setTimeout(() => hotUpdate(path, value), 300);
 });
+
+// Try to hot-swap the changed module; fall back to a full reload when the SW says so.
+async function hotUpdate(path: string, content: string) {
+  setStatus('updating…');
+  try {
+    const { reload, boundaries } = await updateFile(path, content);
+    if (reload) {
+      refreshPreview(els.iframe);
+      setStatus(`reloaded (${path})`);
+    } else {
+      setStatus(`hot-updated ${boundaries.join(', ') || path}`);
+    }
+  } catch (err) {
+    setStatus(`error: ${(err as Error).message}`);
+  }
+}
 
 function setStatus(msg: string) {
   els.status.textContent = msg;

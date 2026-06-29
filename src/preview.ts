@@ -61,6 +61,38 @@ function postOnce(
   });
 }
 
+export type HotResult = { reload: boolean; boundaries: string[] };
+
+/**
+ * Push a single-file content edit to the SW for HMR. The SW broadcasts a hot update to
+ * the preview iframe itself; the ack tells us whether a full reload is needed instead.
+ */
+export async function updateFile(
+  path: string,
+  content: string,
+  timeout = 4000
+): Promise<HotResult> {
+  const worker = targetWorker();
+  if (!worker) throw new Error('No active service worker to update.');
+  return new Promise((resolve, reject) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(
+      () => reject(new Error('SW update timed out')),
+      timeout
+    );
+    channel.port1.onmessage = (e) => {
+      clearTimeout(timer);
+      if (e.data?.type === 'file-updated')
+        resolve({
+          reload: !!e.data.reload,
+          boundaries: e.data.boundaries ?? [],
+        });
+      else reject(new Error('Unexpected SW reply'));
+    };
+    worker.postMessage({ type: 'update-file', path, content }, [channel.port2]);
+  });
+}
+
 /** Re-sync + refresh whenever a new SW takes control (it starts with an empty FS). */
 export function onControllerChange(handler: () => void): void {
   navigator.serviceWorker.addEventListener('controllerchange', handler);

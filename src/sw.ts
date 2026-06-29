@@ -9,6 +9,13 @@ import { MemFS, normalizePath } from './fs';
 import { isBare, resolveRelative } from './resolve';
 import { parseDeps, buildImports } from './packages';
 import { cssModuleToJs, cssToJs } from './css';
+import {
+  detectAccept,
+  planUpdate,
+  hmrPreamble,
+  HMR_CLIENT_JS,
+  type ModuleGraph,
+} from './hmr';
 import type { FileMap } from './types';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
@@ -91,6 +98,13 @@ function ensureCssReady(): Promise<void> {
 const cache = new Map<string, { src: string; out: string }>();
 const cssCache = new Map<string, { src: string; out: string }>();
 
+// ---- HMR state ----
+const graph: ModuleGraph = new Map(); // importer -> resolved relative deps
+const accepts = new Map<string, boolean>(); // module -> is a JS accept boundary
+const stamps = new Map<string, number>(); // module -> last-changed clock (import ?t)
+let clock = 0; // monotonic; bumped per edit
+const stampOf = (p: string) => stamps.get(p) ?? 0;
+
 const isCssModule = (p: string) => p.endsWith('.module.css');
 
 /** Compile a CSS-module file to a JS module: scoped CSS injected + class-name map exported. */
@@ -122,6 +136,7 @@ async function getModule(path: string): Promise<string | undefined> {
   const cached = cache.get(path);
   if (cached && cached.src === src) return cached.out;
 
+  accepts.set(path, detectAccept(src));
   const loader = ext(path) as 'ts' | 'tsx' | 'jsx' | 'js';
   const result = await esbuild.transform(src, {
     loader,
@@ -130,14 +145,20 @@ async function getModule(path: string): Promise<string | undefined> {
     sourcemap: 'inline',
     sourcefile: path,
   });
-  const out = rewriteSpecifiers(path, result.code);
+  // Preamble wires `import.meta.hot`; added after rewrite so it isn't itself rewritten.
+  const out = hmrPreamble(path) + rewriteSpecifiers(path, result.code);
   cache.set(path, { src, out });
   return out;
 }
 
-/** Rewrite import specifiers: relative -> /__fs/<resolved>, bare -> esm.sh URL. */
+/**
+ * Rewrite import specifiers: relative -> /__fs/<resolved>?t=<stamp>, bare -> esm.sh URL.
+ * The `?t` stamp makes a re-imported module re-fetch deps that changed (ESM caches by
+ * URL). Also records the importer -> deps edge into the module graph for HMR propagation.
+ */
 function rewriteSpecifiers(fromPath: string, code: string): string {
   const [imports] = parseImports(code);
+  const deps = new Set<string>();
   let out = '';
   let last = 0;
   for (const imp of imports) {
@@ -146,12 +167,15 @@ function rewriteSpecifiers(fromPath: string, code: string): string {
     // Bare specifiers are left untouched — resolved by the injected import map.
     if (isBare(spec)) continue;
     const resolved = resolveRelative(fromPath, spec, fs);
-    const replacement = resolved ? FS_PREFIX + resolved : null;
-    if (replacement) {
-      out += code.slice(last, imp.s) + replacement;
+    if (resolved) {
+      deps.add(resolved);
+      out +=
+        code.slice(last, imp.s) +
+        `${FS_PREFIX}${resolved}?t=${stampOf(resolved)}`;
       last = imp.e;
     }
   }
+  graph.set(fromPath, deps);
   return out + code.slice(last);
 }
 
@@ -204,12 +228,51 @@ sw.addEventListener('message', (event) => {
     fs = new MemFS(data.files as FileMap);
     cache.clear();
     cssCache.clear();
+    graph.clear();
+    accepts.clear();
+    stamps.clear();
     event.ports[0]?.postMessage({
       type: 'files-loaded',
       count: fs.list().length,
     });
+  } else if (data?.type === 'update-file') {
+    event.waitUntil(
+      handleUpdate(data.path as string, data.content as string, event)
+    );
   }
 });
+
+/**
+ * A single-file content edit: update the FS, bump stamps along the dirty chain, then
+ * either broadcast a hot update to the preview client(s) or tell the editor to reload.
+ */
+async function handleUpdate(
+  path: string,
+  content: string,
+  event: ExtendableMessageEvent
+): Promise<void> {
+  fs.write(path, content);
+  cache.clear(); // outputs embed dep stamps; cheapest correct invalidation is clear-all
+  cssCache.clear();
+  accepts.set(path, detectAccept(content));
+
+  const { reload, boundaries, dirty } = planUpdate(path, graph, accepts);
+  clock++;
+  for (const p of dirty) stamps.set(p, clock);
+
+  if (!reload) {
+    const payload = {
+      type: 'hmr',
+      boundaries: boundaries.map((p) => ({
+        path: p,
+        url: `${FS_PREFIX}${p}?t=${clock}`,
+      })),
+    };
+    for (const client of await sw.clients.matchAll({ type: 'window' }))
+      client.postMessage(payload);
+  }
+  event.ports[0]?.postMessage({ type: 'file-updated', reload, boundaries });
+}
 
 sw.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
@@ -224,11 +287,16 @@ sw.addEventListener('fetch', (event) => {
 
 async function serve(rawPath: string, destination = ''): Promise<Response> {
   const path = normalizePath(rawPath) || 'index.html';
+  // Virtual module: the HMR client runtime (not a real FS file).
+  if (path === '@hmr')
+    return new Response(HMR_CLIENT_JS, {
+      status: 200,
+      headers: { 'Content-Type': MIME.js },
+    });
   const raw = fs.read(path);
   if (raw === undefined)
     return new Response(`Not found in FS: ${path}`, { status: 404 });
 
-  console.log({ rawPath, path });
   try {
     if (ext(path) === 'html') {
       await ensureReady();

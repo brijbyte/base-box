@@ -245,6 +245,85 @@ test('canceling inline new-file (Escape) leaves no file', async ({ page }) => {
   await expect(input).toHaveCount(0);
 });
 
+test('CSS edit hot-updates without losing React state (HMR)', async ({
+  page,
+}) => {
+  const files = {
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/main.tsx"></script></body></html>`,
+    'src/main.tsx': `import "./box.css";
+import { createRoot } from "react-dom/client";
+import { useState } from "react";
+function App() {
+  const [c, setC] = useState(0);
+  return <button id="b" onClick={() => setC((x) => x + 1)}>count {c}</button>;
+}
+createRoot(document.getElementById("root")!).render(<App />);`,
+    'src/box.css': `#b { color: rgb(1, 2, 3); }`,
+  };
+  await page.goto(`/?files=${await encodeFiles(files)}`);
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  const frame = page.frameLocator('#preview');
+  const btn = frame.locator('#b');
+  await expect(btn).toHaveText('count 0', { timeout: 20000 });
+  await expect(btn).toHaveCSS('color', 'rgb(1, 2, 3)');
+
+  // Build up state a reload would wipe.
+  await btn.click();
+  await expect(btn).toHaveText('count 1');
+
+  // Edit the CSS file via the editor.
+  await page.getByRole('treeitem', { name: 'box.css' }).click();
+  await page.locator('#editor .cm-content').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.insertText('#b { color: rgb(4, 5, 6); }');
+
+  // Style swaps in place AND the React state survives → it was a hot update, not a reload.
+  await expect(btn).toHaveCSS('color', 'rgb(4, 5, 6)', { timeout: 15000 });
+  await expect(btn).toHaveText('count 1');
+  await expect(page.locator('#status')).toContainText('hot-updated');
+});
+
+test('JS module with import.meta.hot.accept hot-swaps, preserving window state (HMR)', async ({
+  page,
+}) => {
+  const body = (msg: string) => `const MSG = "${msg}";
+const o = document.getElementById("o")!;
+function paint() { o.textContent = MSG + " " + ((window as any).__n ?? 0); }
+paint();
+import.meta.hot.accept(() => {});`;
+  const files = {
+    'index.html': `<!doctype html><html><head></head><body><div id="o"></div>
+<script type="module" src="./src/main.ts"></script></body></html>`,
+    'src/main.ts': body('A'),
+  };
+  await page.goto(`/?files=${await encodeFiles(files)}`);
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  const o = page.frameLocator('#preview').locator('#o');
+  await expect(o).toHaveText('A 0', { timeout: 20000 });
+
+  // Seed iframe window state that a full reload would wipe.
+  await o.evaluate(() => {
+    (window as unknown as { __n: number }).__n = 5;
+  });
+
+  // Edit the self-accepting module.
+  await page.getByRole('treeitem', { name: 'main.ts' }).click();
+  await page.locator('#editor .cm-content').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.insertText(body('B'));
+
+  // New code ran ("B") AND window.__n survived ("5") → hot-swapped, not reloaded.
+  await expect(o).toHaveText('B 5', { timeout: 15000 });
+  await expect(page.locator('#status')).toContainText('hot-updated');
+});
+
 test('live edit updates the preview', async ({ page }) => {
   await page.goto(`/?files=${await encodeFiles(COUNTER)}`);
   await expect(page.locator('#status')).toContainText('synced', {
