@@ -8,13 +8,7 @@ import {
   refreshPreview,
   onControllerChange,
 } from './preview';
-import {
-  initTheme,
-  cycleTheme,
-  isDark,
-  onSystemThemeChange,
-  type Theme,
-} from './theme';
+import { initTheme, cycleTheme, type Theme } from './theme';
 import { createEditor } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
 
@@ -124,19 +118,12 @@ els.del.addEventListener('click', () => {
 });
 
 // --- Theme ---
-function applyTheme() {
-  const dark = isDark(theme);
-  editor.setDark(dark);
-  panel?.setTheme(dark);
-}
+// Styling is CSS-variable driven: cycleTheme() flips `data-theme` on <html> and the
+// editor (var-based CM theme), tree (cascading --trees-* overrides) and chrome follow.
 els.theme.textContent = themeLabel(theme);
 els.theme.addEventListener('click', () => {
   theme = cycleTheme();
   els.theme.textContent = themeLabel(theme);
-  applyTheme();
-});
-onSystemThemeChange(() => {
-  if (theme === 'system') applyTheme();
 });
 
 els.share.addEventListener('click', async () => {
@@ -161,7 +148,6 @@ async function boot() {
     onMove,
   });
   openFile(initial);
-  applyTheme();
   await rebuild();
 }
 

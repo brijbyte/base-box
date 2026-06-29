@@ -1,8 +1,4 @@
-import {
-  FileTree,
-  themeToTreeStyles,
-  type FileTreeMutationSemanticEvent,
-} from '@pierre/trees';
+import { FileTree, type FileTreeMutationSemanticEvent } from '@pierre/trees';
 
 export interface FileTreeHandlers {
   /** A file (not a directory) was selected/opened. */
@@ -18,7 +14,6 @@ export interface FileTreePanel {
   startRename(path: string): void;
   select(path: string): void;
   selected(): string | null;
-  setTheme(dark: boolean): void;
 }
 
 /**
@@ -71,12 +66,5 @@ export function createFileTree(
       tree.getItem(p)?.select();
     },
     selected: () => tree.getSelectedPaths()[0] ?? tree.getFocusedPath(),
-    setTheme: (dark) => {
-      // --trees-theme-* custom properties cascade into the tree's shadow root.
-      const styles = themeToTreeStyles({ type: dark ? 'dark' : 'light' });
-      for (const [k, v] of Object.entries(styles)) {
-        if (k.startsWith('--')) mount.style.setProperty(k, v);
-      }
-    },
   };
 }

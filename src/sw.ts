@@ -32,13 +32,23 @@ const ext = (p: string) => p.slice(p.lastIndexOf('.') + 1).toLowerCase();
 const contentType = (p: string) => MIME[ext(p)] ?? 'text/plain';
 
 // ---- esbuild + lexer init (once) ----
-const WASM_CACHE = 'base-box-wasm-v1';
+// Key the cache by esbuild version: the wasm and the JS must match exactly, and in
+// dev the wasm URL is version-stable, so a bare key would feed a stale wasm to a newer
+// esbuild and `initialize` would hang. Versioning auto-invalidates on upgrade.
+const WASM_CACHE_PREFIX = 'base-box-wasm-';
+const WASM_CACHE = `${WASM_CACHE_PREFIX}${esbuild.version}`;
 
 /**
  * Fetch + compile esbuild.wasm, caching the raw bytes in Cache Storage so the ~12 MB
  * payload survives HTTP-cache eviction and is available offline after first load.
  */
 async function loadWasmModule(): Promise<WebAssembly.Module> {
+  // Drop caches from older esbuild versions so they don't accumulate.
+  for (const name of await caches.keys()) {
+    if (name.startsWith(WASM_CACHE_PREFIX) && name !== WASM_CACHE) {
+      await caches.delete(name);
+    }
+  }
   const cache = await caches.open(WASM_CACHE);
   let res = await cache.match(esbuildWasmUrl);
   if (!res) {

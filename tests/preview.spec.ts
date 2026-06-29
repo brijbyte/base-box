@@ -51,7 +51,12 @@ test('caches esbuild.wasm in Cache Storage', async ({ page }) => {
     timeout: 20000,
   });
   const cachedCount = await page.evaluate(async () => {
-    const cache = await caches.open('base-box-wasm-v1');
+    // Cache name is versioned (base-box-wasm-<esbuild version>); find it by prefix.
+    const name = (await caches.keys()).find((n) =>
+      n.startsWith('base-box-wasm-')
+    );
+    if (!name) return 0;
+    const cache = await caches.open(name);
     return (await cache.keys()).length;
   });
   expect(cachedCount).toBeGreaterThan(0);

@@ -4,7 +4,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
 import { json } from '@codemirror/lang-json';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { editorTheme } from './editor-theme';
 
 const ext = (path: string) =>
   path.slice(path.lastIndexOf('.') + 1).toLowerCase();
@@ -37,17 +37,16 @@ export interface Editor {
   /** Load a file: replace contents and switch the language by extension. */
   setFile(path: string, content: string): void;
   getContent(): string;
-  setDark(dark: boolean): void;
   focus(): void;
 }
 
-/** A CodeMirror 6 editor. `onChange` fires only on user edits, not programmatic loads. */
+/** A CodeMirror 6 editor. `onChange` fires only on user edits, not programmatic loads.
+ *  Theming is CSS-variable driven (see editor-theme.ts) — light/dark follow `data-theme`. */
 export function createEditor(
   parent: HTMLElement,
   onChange: (value: string) => void
 ): Editor {
   const language = new Compartment();
-  const theme = new Compartment();
   let suppress = false; // ignore change events during programmatic file loads
 
   const view = new EditorView({
@@ -55,8 +54,8 @@ export function createEditor(
     state: EditorState.create({
       extensions: [
         basicSetup,
+        editorTheme,
         language.of([]),
-        theme.of([]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !suppress) onChange(view.state.doc.toString());
         }),
@@ -74,9 +73,6 @@ export function createEditor(
       suppress = false;
     },
     getContent: () => view.state.doc.toString(),
-    setDark(dark) {
-      view.dispatch({ effects: theme.reconfigure(dark ? oneDark : []) });
-    },
     focus: () => view.focus(),
   };
 }

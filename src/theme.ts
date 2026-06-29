@@ -33,15 +33,3 @@ export function initTheme(): Theme {
   applyTheme(t);
   return t;
 }
-
-const darkQuery = () => window.matchMedia('(prefers-color-scheme: dark)');
-
-/** Whether the given theme resolves to dark right now (system → ask the OS). */
-export function isDark(theme: Theme): boolean {
-  return theme === 'dark' || (theme === 'system' && darkQuery().matches);
-}
-
-/** Notify when the OS color scheme changes (relevant only in 'system' mode). */
-export function onSystemThemeChange(cb: () => void): void {
-  darkQuery().addEventListener('change', cb);
-}

@@ -14,47 +14,110 @@
       } catch (e) {}
     </script>
     <style>
-      /* Light (default + explicit override) */
-      :root,
-      :root[data-theme='light'] {
+      /*
+        Single source of truth: one VS Code palette per mode. These custom
+        properties drive the app chrome, the CodeMirror theme (--cm- and --tok-
+        vars, see editor-theme.ts) and the file tree (--trees- override vars,
+        which cascade into its shadow root). Flip `data-theme` to re-theme all.
+        VS Code "Light Modern" / "Dark Modern" + classic Light+/Dark+ tokens.
+      */
+      /* Light = the default. The dark rules below are guarded with
+         :not([data-theme='light']) so an explicit light choice always wins. */
+      :root {
         color-scheme: light;
+        /* chrome */
         --bg: #ffffff;
-        --fg: #1f2328;
-        --header-bg: #0d1117;
-        --header-fg: #e6edf3;
-        --bar-bg: #f6f8fa;
-        --border: #d0d7de;
-        --muted: #656d76;
+        --fg: #3b3b3b;
+        --header-bg: #f8f8f8;
+        --header-fg: #3b3b3b;
+        --bar-bg: #f8f8f8;
+        --border: #e5e5e5;
+        --muted: #6e7681;
         --control-bg: #ffffff;
-        --control-fg: #1f2328;
+        --control-fg: #3b3b3b;
+        --accent: #005fb8;
+        --sidebar-bg: #f8f8f8;
+        --selected-bg: #e4e6f1;
+        --hover-bg: #f0f0f0;
+        /* editor */
+        --cm-bg: #ffffff;
+        --cm-fg: #3b3b3b;
+        --cm-cursor: #005fb8;
+        --cm-selection: #add6ff;
+        --cm-active-line: #f5f5f5;
+        --cm-gutter-fg: #6e7681;
+        /* syntax tokens (Light+) */
+        --tok-comment: #008000;
+        --tok-keyword: #0000ff;
+        --tok-string: #a31515;
+        --tok-number: #098658;
+        --tok-function: #795e26;
+        --tok-type: #267f99;
+        --tok-variable: #001080;
+        --tok-operator: #3b3b3b;
       }
-      /* Dark via system preference (unless explicitly overridden to light) */
+      /* Dark — applied via system preference and via explicit override. */
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme='light']) {
           color-scheme: dark;
-          --bg: #0d1117;
-          --fg: #e6edf3;
-          --header-bg: #010409;
-          --header-fg: #e6edf3;
-          --bar-bg: #161b22;
-          --border: #30363d;
-          --muted: #8b949e;
-          --control-bg: #21262d;
-          --control-fg: #e6edf3;
+          --bg: #1f1f1f;
+          --fg: #cccccc;
+          --header-bg: #181818;
+          --header-fg: #cccccc;
+          --bar-bg: #181818;
+          --border: #2b2b2b;
+          --muted: #9d9d9d;
+          --control-bg: #313131;
+          --control-fg: #cccccc;
+          --accent: #0078d4;
+          --sidebar-bg: #181818;
+          --selected-bg: #37373d;
+          --hover-bg: #2a2d2e;
+          --cm-bg: #1f1f1f;
+          --cm-fg: #d4d4d4;
+          --cm-cursor: #aeafad;
+          --cm-selection: #264f78;
+          --cm-active-line: #2a2a2a;
+          --cm-gutter-fg: #6e7681;
+          --tok-comment: #6a9955;
+          --tok-keyword: #569cd6;
+          --tok-string: #ce9178;
+          --tok-number: #b5cea8;
+          --tok-function: #dcdcaa;
+          --tok-type: #4ec9b0;
+          --tok-variable: #9cdcfe;
+          --tok-operator: #d4d4d4;
         }
       }
-      /* Dark via explicit override */
       :root[data-theme='dark'] {
         color-scheme: dark;
-        --bg: #0d1117;
-        --fg: #e6edf3;
-        --header-bg: #010409;
-        --header-fg: #e6edf3;
-        --bar-bg: #161b22;
-        --border: #30363d;
-        --muted: #8b949e;
-        --control-bg: #21262d;
-        --control-fg: #e6edf3;
+        --bg: #1f1f1f;
+        --fg: #cccccc;
+        --header-bg: #181818;
+        --header-fg: #cccccc;
+        --bar-bg: #181818;
+        --border: #2b2b2b;
+        --muted: #9d9d9d;
+        --control-bg: #313131;
+        --control-fg: #cccccc;
+        --accent: #0078d4;
+        --sidebar-bg: #181818;
+        --selected-bg: #37373d;
+        --hover-bg: #2a2d2e;
+        --cm-bg: #1f1f1f;
+        --cm-fg: #d4d4d4;
+        --cm-cursor: #aeafad;
+        --cm-selection: #264f78;
+        --cm-active-line: #2a2a2a;
+        --cm-gutter-fg: #6e7681;
+        --tok-comment: #6a9955;
+        --tok-keyword: #569cd6;
+        --tok-string: #ce9178;
+        --tok-number: #b5cea8;
+        --tok-function: #dcdcaa;
+        --tok-type: #4ec9b0;
+        --tok-variable: #9cdcfe;
+        --tok-operator: #d4d4d4;
       }
 
       * {
@@ -87,10 +150,12 @@
         padding: 8px 12px;
         background: var(--header-bg);
         color: var(--header-fg);
+        border-bottom: 1px solid var(--border);
       }
 
       header strong {
         font-size: 16px;
+        color: var(--accent);
       }
 
       #status {
@@ -116,12 +181,30 @@
       }
       .pane.sidebar {
         border-right: 1px solid var(--border);
+        background: var(--sidebar-bg);
       }
       #tree {
         flex: 1;
         min-height: 0;
         overflow: auto;
-        padding: 4px;
+        /* VS Code-minimal file tree: full-bleed rows, no inset, square, compact.
+           These cascade through @pierre/trees' shadow root. */
+        --trees-bg-override: var(--sidebar-bg);
+        --trees-fg-override: var(--fg);
+        --trees-fg-muted-override: var(--muted);
+        --trees-accent-override: var(--accent);
+        --trees-border-color-override: var(--border);
+        --trees-selected-bg-override: var(--selected-bg);
+        --trees-selected-fg-override: var(--fg);
+        --trees-selected-focused-border-color-override: var(--accent);
+        --trees-focus-ring-color-override: var(--accent);
+        --trees-focus-ring-width-override: 1px;
+        --trees-focus-ring-offset-override: -1px;
+        --trees-theme-list-hover-bg: var(--hover-bg);
+        --trees-item-height: 22px;
+        --trees-border-radius-override: 0px;
+        --trees-item-margin-x-override: 0px;
+        --trees-padding-inline-override: 0px;
       }
       #filename {
         font-size: 12px;
@@ -159,9 +242,16 @@
         background: var(--control-bg);
         color: var(--control-fg);
         border: 1px solid var(--border);
-        border-radius: 6px;
+        border-radius: 4px;
         padding: 2px 8px;
         cursor: pointer;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      button:focus-visible {
+        outline: 1px solid var(--accent);
+        outline-offset: 1px;
       }
     </style>
   </head>
