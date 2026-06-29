@@ -44,7 +44,8 @@
         --cm-fg: #3b3b3b;
         --cm-cursor: #005fb8;
         --cm-selection: #add6ff;
-        --cm-active-line: #f5f5f5;
+        /* Translucent so it doesn't paint over the selection layer (opaque hides it). */
+        --cm-active-line: rgba(0, 0, 0, 0.05);
         --cm-gutter-fg: #6e7681;
         /* syntax tokens (Light+) */
         --tok-comment: #008000;
@@ -76,8 +77,8 @@
           --cm-bg: #1f1f1f;
           --cm-fg: #d4d4d4;
           --cm-cursor: #aeafad;
-          --cm-selection: #264f78;
-          --cm-active-line: #2a2a2a;
+          --cm-selection: #2f5e9e;
+          --cm-active-line: rgba(255, 255, 255, 0.06);
           --cm-gutter-fg: #6e7681;
           --tok-comment: #6a9955;
           --tok-keyword: #569cd6;
@@ -107,8 +108,8 @@
         --cm-bg: #1f1f1f;
         --cm-fg: #d4d4d4;
         --cm-cursor: #aeafad;
-        --cm-selection: #264f78;
-        --cm-active-line: #2a2a2a;
+        --cm-selection: #2f5e9e;
+        --cm-active-line: rgba(255, 255, 255, 0.06);
         --cm-gutter-fg: #6e7681;
         --tok-comment: #6a9955;
         --tok-keyword: #569cd6;
@@ -171,7 +172,9 @@
       }
 
       .pane > .bar {
-        padding: 6px 10px;
+        height: 35px;
+        box-sizing: border-box;
+        padding: 0 10px;
         background: var(--bar-bg);
         border-bottom: 1px solid var(--border);
         color: var(--fg);
@@ -182,6 +185,72 @@
       .pane.sidebar {
         border-right: 1px solid var(--border);
         background: var(--sidebar-bg);
+      }
+      /* VS Code-style explorer header: uppercase title + chevron, hover-revealed icons. */
+      .tree-header {
+        justify-content: space-between;
+        padding: 0 6px 0 8px;
+      }
+      .tree-title {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--fg);
+        user-select: none;
+        overflow: hidden;
+      }
+      .tree-title .chevron {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        color: var(--muted);
+      }
+      .tree-actions {
+        display: flex;
+        gap: 1px;
+        opacity: 0;
+        transition: opacity 0.1s;
+      }
+      .pane.sidebar:hover .tree-actions,
+      .pane.sidebar:focus-within .tree-actions {
+        opacity: 1;
+      }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        color: var(--fg);
+        cursor: pointer;
+      }
+      .icon-btn:hover {
+        background: var(--hover-bg);
+        border-color: transparent;
+      }
+      .icon-btn:focus-visible {
+        outline: 1px solid var(--accent);
+        outline-offset: -1px;
+      }
+      .icon-btn svg,
+      .tree-title .chevron {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-btn svg {
+        width: 16px;
+        height: 16px;
       }
       #tree {
         flex: 1;
@@ -265,10 +334,22 @@
         <span id="status"></span>
       </header>
       <div class="pane sidebar">
-        <div class="bar">
-          <button id="new" title="New file">+ File</button>
-          <button id="rename" title="Rename selected">Rename</button>
-          <button id="delete" title="Delete selected">Delete</button>
+        <div class="bar tree-header">
+          <span class="tree-title">
+            <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            base-box
+          </span>
+          <span class="tree-actions">
+            <button id="new" class="icon-btn" title="New File" aria-label="New File">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M12 18v-6" /><path d="M9 15h6" /></svg>
+            </button>
+            <button id="rename" class="icon-btn" title="Rename" aria-label="Rename selected">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.4 2.6a1 1 0 0 1 3 3l-9 9-3.5 1 1-3.5z" /></svg>
+            </button>
+            <button id="delete" class="icon-btn" title="Delete" aria-label="Delete selected">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M10 11v6M14 11v6" /></svg>
+            </button>
+          </span>
         </div>
         <div id="tree"></div>
       </div>

@@ -121,6 +121,28 @@ el.textContent = styles.title;`,
   await expect(o).toHaveCSS('color', 'rgb(10, 20, 30)');
 });
 
+test('side-effect CSS import injects styles (plain .css in a module graph)', async ({
+  page,
+}) => {
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="o"></div>
+<script type="module" src="./src/main.ts"></script></body></html>`,
+    // Plain (non-module) CSS imported for its side effect only — no default binding.
+    'src/main.ts': `import "./global.css";
+document.getElementById("o")!.textContent = "ok";`,
+    'src/global.css': `#o { color: rgb(1, 2, 3); }`,
+  });
+  await page.goto(`/?files=${files}`);
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  const o = page.frameLocator('#preview').locator('#o');
+  await expect(o).toHaveText('ok', { timeout: 15000 });
+  // The injected <style> applies — proves `.css` was served as a JS module, not text/css.
+  await expect(o).toHaveCSS('color', 'rgb(1, 2, 3)');
+});
+
 test('caches esbuild.wasm in Cache Storage', async ({ page }) => {
   await page.goto(`/?files=${await encodeFiles(COUNTER)}`);
   await expect(page.locator('#status')).toContainText('synced', {
@@ -190,7 +212,7 @@ test('create and delete files via the tree (inline new-file)', async ({
 
   // Select a file in src so the new file is created inside src/.
   await page.getByRole('treeitem', { name: 'App.tsx' }).click();
-  await page.getByRole('button', { name: '+ File' }).click();
+  await page.getByRole('button', { name: 'New File' }).click();
 
   // Inline input appears with the placeholder text selected; type the real name.
   const input = page.locator('input[data-item-rename-input]');
@@ -203,7 +225,7 @@ test('create and delete files via the tree (inline new-file)', async ({
   await expect(page.locator('#filename')).toHaveText('src/extra.ts');
 
   // It's selected after creation; delete it.
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('button', { name: 'Delete selected' }).click();
   await expect(page.getByRole('treeitem', { name: 'extra.ts' })).toHaveCount(0);
 });
 
@@ -213,7 +235,7 @@ test('canceling inline new-file (Escape) leaves no file', async ({ page }) => {
     timeout: 15000,
   });
 
-  await page.getByRole('button', { name: '+ File' }).click();
+  await page.getByRole('button', { name: 'New File' }).click();
   const input = page.locator('input[data-item-rename-input]');
   await expect(input).toBeVisible();
   await input.press('Escape');

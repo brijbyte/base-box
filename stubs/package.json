@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "name": "hero---base-ui-example",
+  "version": "0.0.0",
+  "description": "Hero demo",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19",
+    "react-dom": "^19",
+    "@base-ui/react": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
+  }
+}

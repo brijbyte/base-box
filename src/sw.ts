@@ -8,7 +8,7 @@ import cssWasmUrl from 'lightningcss-wasm/lightningcss_node.wasm?url';
 import { MemFS, normalizePath } from './fs';
 import { isBare, resolveRelative } from './resolve';
 import { parseDeps, buildImports } from './packages';
-import { cssModuleToJs } from './css';
+import { cssModuleToJs, cssToJs } from './css';
 import type { FileMap } from './types';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
@@ -215,15 +215,20 @@ sw.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== sw.location.origin || !url.pathname.startsWith(FS_PREFIX))
     return;
-  event.respondWith(serve(url.pathname.slice(FS_PREFIX.length)));
+  // `destination` distinguishes a stylesheet `<link>` ('style') from a JS-graph
+  // `import './x.css'` ('script'/empty) — see the plain-CSS branch in `serve`.
+  event.respondWith(
+    serve(url.pathname.slice(FS_PREFIX.length), event.request.destination)
+  );
 });
 
-async function serve(rawPath: string): Promise<Response> {
+async function serve(rawPath: string, destination = ''): Promise<Response> {
   const path = normalizePath(rawPath) || 'index.html';
   const raw = fs.read(path);
   if (raw === undefined)
     return new Response(`Not found in FS: ${path}`, { status: 404 });
 
+  console.log({ rawPath, path });
   try {
     if (ext(path) === 'html') {
       await ensureReady();
@@ -232,6 +237,15 @@ async function serve(rawPath: string): Promise<Response> {
     if (isCssModule(path)) {
       await ensureCssReady();
       return new Response(getCssModule(path), {
+        status: 200,
+        headers: { 'Content-Type': MIME.js },
+      });
+    }
+    // Plain `.css` imported in a module graph (not via `<link rel=stylesheet>`):
+    // serve a side-effect JS module that injects the CSS. `<link>` requests
+    // (destination 'style') fall through to the generic `text/css` branch.
+    if (ext(path) === 'css' && destination !== 'style') {
+      return new Response(cssToJs(path, raw), {
         status: 200,
         headers: { 'Content-Type': MIME.js },
       });
