@@ -63,6 +63,8 @@ const els = {
   status: document.querySelector<HTMLSpanElement>('#status')!,
   share: document.querySelector<HTMLButtonElement>('#share')!,
   theme: document.querySelector<HTMLButtonElement>('#theme')!,
+  settings: document.querySelector<HTMLButtonElement>('#settings')!,
+  settingsPanel: document.querySelector<HTMLDivElement>('#settingsPanel')!,
   filename: document.querySelector<HTMLDivElement>('#filename')!,
   newFile: document.querySelector<HTMLButtonElement>('#new')!,
   rename: document.querySelector<HTMLButtonElement>('#rename')!,
@@ -283,6 +285,23 @@ els.del.addEventListener('click', () => {
   if (p) panel.remove(p); // → onRemove
 });
 
+// --- Settings popover (gear toggles it; outside-click / Escape closes) ---
+function setSettingsOpen(open: boolean) {
+  els.settingsPanel.hidden = !open;
+  els.settings.setAttribute('aria-expanded', String(open));
+}
+els.settings.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setSettingsOpen(!!els.settingsPanel.hidden);
+});
+document.addEventListener('click', (e) => {
+  if (!els.settingsPanel.hidden && !els.settings.parentElement!.contains(e.target as Node))
+    setSettingsOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') setSettingsOpen(false);
+});
+
 // --- Theme ---
 // Styling is CSS-variable driven: cycleTheme() flips `data-theme` on <html> and the
 // editor (var-based CM theme), tree (cascading --trees-* overrides) and chrome follow.
@@ -300,6 +319,7 @@ els.share.addEventListener('click', async () => {
   await navigator.clipboard?.writeText(url).catch(() => {});
   history.replaceState(null, '', url);
   setStatus('share URL copied');
+  setSettingsOpen(false);
 });
 
 async function boot() {

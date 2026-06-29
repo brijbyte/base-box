@@ -103,6 +103,10 @@ function ensureCssReady(): Promise<void> {
 // ---- transform cache keyed by content ----
 const cache = new Map<string, { src: string; out: string }>();
 const cssCache = new Map<string, { src: string; out: string }>();
+// Files whose last transform failed. While non-empty the preview is in a broken state
+// (an importer may have failed to *link* against an export-less stub), so the next edit
+// must full-reload rather than hot-swap — a CSS boundary update can't relink the importer.
+const errored = new Set<string>();
 
 // ---- HMR state ----
 const graph: ModuleGraph = new Map(); // importer -> resolved relative deps
@@ -119,11 +123,22 @@ function getCssModule(path: string): string {
   const cached = cssCache.get(path);
   if (cached && cached.src === src) return cached.out;
 
-  const { code, exports } = transformCss({
-    filename: path,
-    code: new TextEncoder().encode(src),
-    cssModules: true,
-  });
+  let result;
+  try {
+    result = transformCss({
+      filename: path,
+      code: new TextEncoder().encode(src),
+      cssModules: true,
+    });
+  } catch (err) {
+    // lightningcss carries the position on `loc`, not in `message` — fold it in so the
+    // central catch (which only reads `message`) surfaces line/column to the user.
+    const loc = (err as { loc?: { line: number; column: number } }).loc;
+    if (err instanceof Error && loc)
+      err.message = `${err.message} (${loc.line}:${loc.column})`;
+    throw err;
+  }
+  const { code, exports } = result;
   const css = new TextDecoder().decode(code);
   const tokens: Record<string, string> = {};
   for (const [orig, exp] of Object.entries(exports ?? {}))
@@ -276,7 +291,12 @@ async function handleUpdate(path: string, content: string): Promise<HotResult> {
   cssCache.clear();
   accepts.set(path, detectAccept(content));
 
-  const { reload, boundaries, dirty } = planUpdate(path, graph, accepts);
+  // If the preview is currently broken, a hot-swap can't relink the failed importer —
+  // force a full reload so the whole graph re-evaluates against the fixed file.
+  const wasBroken = errored.size > 0;
+  const plan = planUpdate(path, graph, accepts);
+  const { boundaries, dirty } = plan;
+  const reload = plan.reload || wasBroken;
   clock++;
   for (const p of dirty) stamps.set(p, clock);
 
@@ -358,7 +378,9 @@ async function serve(rawPath: string, destination = ''): Promise<Response> {
     }
     if (isCssModule(path)) {
       await ensureCssReady();
-      return new Response(getCssModule(path), {
+      const out = getCssModule(path);
+      errored.delete(path);
+      return new Response(out, {
         status: 200,
         headers: { 'Content-Type': MIME.js },
       });
@@ -375,6 +397,7 @@ async function serve(rawPath: string, destination = ''): Promise<Response> {
     if (JS_EXTS.has(ext(path))) {
       await ensureReady();
       const code = await getModule(path);
+      errored.delete(path);
       return new Response(code ?? raw, {
         status: 200,
         headers: { 'Content-Type': MIME.js },
@@ -388,6 +411,7 @@ async function serve(rawPath: string, destination = ''): Promise<Response> {
     const msg = err instanceof Error ? err.message : String(err);
     // Broadcast (reaches the host even if the stub never executes), and return a module
     // that also reports + throws for the case where it does run as the entry.
+    errored.add(path);
     void broadcastCompileError(path, msg);
     return new Response(compileErrorModule(path, msg), {
       status: 200,

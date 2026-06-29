@@ -147,6 +147,36 @@ header strong {
   color: var(--accent);
 }
 
+/* Settings gear pinned to the header's right edge, popover anchored beneath it. */
+.settings {
+  position: relative;
+  margin-left: auto;
+}
+
+.settings-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--header-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.settings-panel[hidden] {
+  display: none;
+}
+
+.settings-panel button {
+  text-align: left;
+  white-space: nowrap;
+}
+
 /* Bottom status bar: spans all columns, fixed height. Message on the left,
    editor info (cursor / indent / language / diagnostics) on the right. */
 #statusbar {
