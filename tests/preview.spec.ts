@@ -529,3 +529,46 @@ test('LSP: resolves react/jsx-runtime types from range deps (no phantom errors)'
     "Type 'string' is not assignable to type 'number'"
   );
 });
+
+test('CSS LSP: reports a syntax-error diagnostic from the CSS server', async ({
+  page,
+}) => {
+  test.slow(); // first CSS test eats the one-time cold transform of the LS worker
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head><link rel="stylesheet" href="./styles.css"></head><body></body></html>`,
+    'styles.css': `.box { color red }\n`, // missing colon → "colon expected"
+  });
+  await page.goto(`/?files=${files}`);
+  await openTsFile(page, 'styles.css');
+
+  // The CSS worker pushes publishDiagnostics → CM renders an error squiggle. The worker is
+  // self-contained (no CDN), so this is fast — but keep the shared long timeout for CI.
+  await expect(page.locator('#editor .cm-lintRange-error').first()).toBeVisible(
+    {
+      timeout: LSP_TIMEOUT,
+    }
+  );
+});
+
+test('CSS LSP: hover shows MDN property docs', async ({ page }) => {
+  // Hover (with MDN docs) is LSP-only — unlike completion, `@codemirror/lang-css` doesn't
+  // provide it — so this isolates the CSS language server.
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head><link rel="stylesheet" href="./styles.css"></head><body></body></html>`,
+    'styles.css': `.box { color: red; }\n`,
+  });
+  await page.goto(`/?files=${files}`);
+  await openTsFile(page, 'styles.css');
+  await page.waitForTimeout(2000); // let the worker boot + didOpen land
+
+  await page
+    .locator('#editor .cm-content .cm-line')
+    .first()
+    .getByText('color')
+    .first()
+    .hover();
+  await expect(page.locator('.cm-lsp-hover-tooltip')).toContainText(
+    "Sets the color of an element's text",
+    { timeout: LSP_TIMEOUT }
+  );
+});

@@ -13,28 +13,47 @@ import { initTheme, cycleTheme, type Theme } from './theme';
 import { onPreviewError } from './messages';
 import { createEditor } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
-import type { LspClient } from './lsp/client'; // type-only: no runtime import
+import type { LspClient } from './lsp/bridge'; // type-only: no runtime import
 
 const fs = new MemFS((await filesFromUrl()) ?? SAMPLE);
 
-// TypeScript language server (worker): autocomplete, diagnostics, hover. The whole
-// client module (and @codemirror/lsp-client) is dynamically imported on the first
-// TS/JS file opened, so projects that only touch HTML/CSS never load any of it.
-const LSP_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs']);
-const lspSupportsPath = (p: string) =>
-  LSP_EXTS.has(p.slice(p.lastIndexOf('.') + 1).toLowerCase());
+// Language servers (each in a worker): autocomplete, diagnostics, hover. Both the client
+// module and its worker load lazily on the first matching file opened — a project that only
+// touches HTML/CSS never pulls the (CDN-heavy) TS server, and vice-versa.
+const extOf = (p: string) => p.slice(p.lastIndexOf('.') + 1).toLowerCase();
+const TS_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs']);
+const CSS_EXTS = new Set(['css', 'scss', 'less']);
 
-let lsp: LspClient | null = null;
-let lspLoading: Promise<LspClient> | null = null;
-function ensureLsp(): Promise<LspClient> {
-  if (lsp) return Promise.resolve(lsp);
-  if (!lspLoading) {
-    lspLoading = import('./lsp/client').then(({ createLspClient }) => {
-      lsp = createLspClient(fs.toJSON());
-      return lsp;
-    });
-  }
-  return lspLoading;
+/** A lazily-created LSP client: imported + booted on first use, then memoized. */
+function lazyLsp(load: () => Promise<LspClient>) {
+  let inst: LspClient | null = null;
+  let loading: Promise<LspClient> | null = null;
+  return {
+    ensure: (): Promise<LspClient> =>
+      inst
+        ? Promise.resolve(inst)
+        : (loading ??= load().then((c) => (inst = c))),
+    instance: () => inst,
+  };
+}
+
+const tsLsp = lazyLsp(() =>
+  import('./lsp/client').then(({ createLspClient }) =>
+    createLspClient(fs.toJSON())
+  )
+);
+const cssLsp = lazyLsp(() =>
+  import('./lsp/css-client').then(({ createCssLspClient }) =>
+    createCssLspClient()
+  )
+);
+
+/** The language server (if any) that handles `path`, by extension. */
+function lspFor(path: string) {
+  const e = extOf(path);
+  if (TS_EXTS.has(e)) return tsLsp;
+  if (CSS_EXTS.has(e)) return cssLsp;
+  return null;
 }
 
 const els = {
@@ -77,8 +96,10 @@ const editor = createEditor(
     debounce = setTimeout(() => hotUpdate(path, value), 300);
   },
   {
-    lspSupport: (path) =>
-      lspSupportsPath(path) ? ensureLsp().then((c) => c.support(path)) : [],
+    lspSupport: (path) => {
+      const lsp = lspFor(path);
+      return lsp ? lsp.ensure().then((c) => c.support(path)) : [];
+    },
   }
 );
 
@@ -172,8 +193,11 @@ function openFile(path: string) {
 
 async function rebuild() {
   setStatus('syncing…');
-  lsp?.sync(fs.toJSON()); // keep the language server's file map current (if running)
-  const count = await syncFiles(fs.toJSON());
+  // Keep each running language server's file map current (no-op until it's booted).
+  const files = fs.toJSON();
+  tsLsp.instance()?.sync(files);
+  cssLsp.instance()?.sync(files);
+  const count = await syncFiles(files);
   reloadPreview('Compiling…');
   setStatus(`synced ${count} files`);
 }
