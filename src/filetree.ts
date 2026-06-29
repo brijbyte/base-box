@@ -18,7 +18,7 @@ export interface FileTreePanel {
   startRename(path: string): void;
   select(path: string): void;
   selected(): string | null;
-  setDark(dark: boolean): void;
+  setTheme(dark: boolean): void;
 }
 
 /**
@@ -71,7 +71,7 @@ export function createFileTree(
       tree.getItem(p)?.select();
     },
     selected: () => tree.getSelectedPaths()[0] ?? tree.getFocusedPath(),
-    setDark: (dark) => {
+    setTheme: (dark) => {
       // --trees-theme-* custom properties cascade into the tree's shadow root.
       const styles = themeToTreeStyles({ type: dark ? 'dark' : 'light' });
       for (const [k, v] of Object.entries(styles)) {

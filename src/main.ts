@@ -127,7 +127,7 @@ els.del.addEventListener('click', () => {
 function applyTheme() {
   const dark = isDark(theme);
   editor.setDark(dark);
-  panel?.setDark(dark);
+  panel?.setTheme(dark);
 }
 els.theme.textContent = themeLabel(theme);
 els.theme.addEventListener('click', () => {
