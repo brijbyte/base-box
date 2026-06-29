@@ -41,6 +41,22 @@ document.getElementById("o")!.innerHTML = "<h1>total " + total + "</h1>";`,
   await expect(frame.locator('h1')).toHaveText('total 5', { timeout: 10000 });
 });
 
+test('caches esbuild.wasm in Cache Storage', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+  // wasm is compiled lazily on first transform; the React render triggers it.
+  await expect(page.frameLocator('#preview').locator('h1')).toBeVisible({
+    timeout: 20000,
+  });
+  const cachedCount = await page.evaluate(async () => {
+    const cache = await caches.open('base-box-wasm-v1');
+    return (await cache.keys()).length;
+  });
+  expect(cachedCount).toBeGreaterThan(0);
+});
+
 test('live edit updates the preview', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#status')).toContainText('synced', {

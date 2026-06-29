@@ -32,14 +32,34 @@ const ext = (p: string) => p.slice(p.lastIndexOf('.') + 1).toLowerCase();
 const contentType = (p: string) => MIME[ext(p)] ?? 'text/plain';
 
 // ---- esbuild + lexer init (once) ----
+const WASM_CACHE = 'base-box-wasm-v1';
+
+/**
+ * Fetch + compile esbuild.wasm, caching the raw bytes in Cache Storage so the ~12 MB
+ * payload survives HTTP-cache eviction and is available offline after first load.
+ */
+async function loadWasmModule(): Promise<WebAssembly.Module> {
+  const cache = await caches.open(WASM_CACHE);
+  let res = await cache.match(esbuildWasmUrl);
+  if (!res) {
+    res = await fetch(esbuildWasmUrl);
+    if (res.ok) await cache.put(esbuildWasmUrl, res.clone());
+  }
+  // compile() over arrayBuffer avoids compileStreaming's application/wasm requirement.
+  return WebAssembly.compile(await res.arrayBuffer());
+}
+
 let ready: Promise<void> | null = null;
 function ensureReady(): Promise<void> {
   if (!ready) {
-    ready = Promise.all([
-      // worker:false -> run in-thread; SW context has no nested Worker constructor.
-      esbuild.initialize({ wasmURL: esbuildWasmUrl, worker: false }),
-      initLexer,
-    ]).then(() => undefined);
+    ready = (async () => {
+      const wasmModule = await loadWasmModule();
+      await Promise.all([
+        // worker:false -> run in-thread; SW context has no nested Worker constructor.
+        esbuild.initialize({ wasmModule, worker: false }),
+        initLexer,
+      ]);
+    })();
   }
   return ready;
 }
