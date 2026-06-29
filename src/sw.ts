@@ -15,10 +15,12 @@ import {
   planUpdate,
   hmrPreamble,
   compileErrorModule,
+  ERROR_RELAY_JS,
   HMR_CLIENT_JS,
   type ModuleGraph,
 } from './hmr';
-import type { HmrMessage } from './messages';
+import { PREVIEW_MSG } from './messages';
+import type { HmrMessage, PreviewErrorMessage } from './messages';
 import type { SwApi, HotResult } from './preview';
 import type { FileMap } from './types';
 
@@ -187,13 +189,28 @@ function rewriteSpecifiers(fromPath: string, code: string): string {
 async function serveHtml(_path: string, html: string): Promise<Response> {
   const importMap = await buildImportMap();
   const tag = `<script type="importmap">${JSON.stringify({ imports: importMap })}</script>`;
+  // Relay runs first (classic script) so compile errors surface even if the app fails to link.
+  const head = `${tag}\n    <script>${ERROR_RELAY_JS}</script>`;
   const injected = html.includes('<head>')
-    ? html.replace('<head>', `<head>\n    ${tag}`)
-    : tag + html;
+    ? html.replace('<head>', `<head>\n    ${head}`)
+    : head + html;
   return new Response(injected, {
     status: 200,
     headers: { 'Content-Type': MIME.html },
   });
+}
+
+/** Broadcast a compile error to every preview window so the host shows the overlay. */
+async function broadcastCompileError(file: string, message: string): Promise<void> {
+  const payload: PreviewErrorMessage = {
+    source: PREVIEW_MSG,
+    type: 'error',
+    kind: 'compile',
+    file,
+    message,
+  };
+  for (const client of await sw.clients.matchAll({ type: 'window' }))
+    client.postMessage(payload);
 }
 
 /**
@@ -369,7 +386,9 @@ async function serve(rawPath: string, destination = ''): Promise<Response> {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Return a module that reports the compile error to the host overlay, then throws.
+    // Broadcast (reaches the host even if the stub never executes), and return a module
+    // that also reports + throws for the case where it does run as the entry.
+    void broadcastCompileError(path, msg);
     return new Response(compileErrorModule(path, msg), {
       status: 200,
       headers: { 'Content-Type': MIME.js },

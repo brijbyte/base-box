@@ -76,9 +76,27 @@ export function hmrPreamble(path: string): string {
 }
 
 /**
+ * Always-present relay injected into the served HTML <head>, before the app's module
+ * scripts. It forwards compile-error messages the SW broadcasts (see sw.ts) up to the
+ * host. This is the *reliable* path: when a file fails to compile its stub has no exports,
+ * so any importer fails to *link* — the stub's own body (and @hmr) never run. This classic
+ * script runs regardless of the module graph, so the error still reaches the overlay.
+ */
+export const ERROR_RELAY_JS = `(function(){
+  if (!navigator.serviceWorker) return;
+  navigator.serviceWorker.addEventListener('message', function(e){
+    var d = e && e.data;
+    if (d && d.source === ${JSON.stringify(PREVIEW_MSG)} && d.type === 'error')
+      (window.parent || window).postMessage(d, '*');
+  });
+})();`;
+
+/**
  * A stand-in module returned when esbuild/lightningcss fail to transform a file: it posts
  * the compile error to the host (overlay) then throws to halt. The thrown message starts
- * with `[base-box]` so the runtime error handler ignores it (no double report).
+ * with `[base-box]` so the runtime error handler ignores it (no double report). The SW also
+ * broadcasts the same error (relayed by ERROR_RELAY_JS) for the case where this body never
+ * runs because an importer failed to link against the export-less stub.
  */
 export function compileErrorModule(file: string, message: string): string {
   const payload = JSON.stringify({
