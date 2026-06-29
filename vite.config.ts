@@ -36,4 +36,15 @@ export default defineConfig({
     nodePolyfills({ globals: { Buffer: true, process: true } }),
     serviceWorkerDev(),
   ],
+  build: {
+    rollupOptions: {
+      // Two entries: the host app (index.html) and the SW. The SW must land at the
+      // dist root as `sw.js` so its default registration scope is `/`.
+      input: { main: 'index.html', sw: 'src/sw.ts' },
+      output: {
+        entryFileNames: (chunk) =>
+          chunk.name === 'sw' ? 'sw.js' : 'assets/[name]-[hash].js',
+      },
+    },
+  },
 });

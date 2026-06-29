@@ -1,0 +1,15 @@
+# Netlify / Cloudflare Pages headers. Vite copies public/ to the dist root.
+
+# Service Worker: grant root scope explicitly and never serve a stale copy,
+# so SW updates always propagate on reload.
+/sw.js
+  Service-Worker-Allowed: /
+  Cache-Control: no-cache
+
+# Host shell must stay fresh (it references hashed asset filenames).
+/index.html
+  Cache-Control: no-cache
+
+# Hashed, content-addressed assets (JS chunks + esbuild.wasm) — cache forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
