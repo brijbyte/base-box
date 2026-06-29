@@ -57,6 +57,28 @@ test('caches esbuild.wasm in Cache Storage', async ({ page }) => {
   expect(cachedCount).toBeGreaterThan(0);
 });
 
+test('theme defaults to system and cycles + persists', async ({ page }) => {
+  await page.goto('/');
+  const html = page.locator('html');
+  const btn = page.locator('#theme');
+
+  // Default: system → no explicit override, CSS prefers-color-scheme decides.
+  await expect(btn).toHaveText('Theme: System');
+  await expect(html).not.toHaveAttribute('data-theme', /.*/);
+
+  await btn.click();
+  await expect(btn).toHaveText('Theme: Light');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+
+  await btn.click();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+
+  // Persists across reload.
+  await page.reload();
+  await expect(page.locator('#theme')).toHaveText('Theme: Dark');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});
+
 test('live edit updates the preview', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#status')).toContainText('synced', {

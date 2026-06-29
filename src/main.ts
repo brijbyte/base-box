@@ -8,6 +8,7 @@ import {
   refreshPreview,
   onControllerChange,
 } from './preview';
+import { initTheme, cycleTheme, type Theme } from './theme';
 
 const fs = new MemFS(filesFromUrl() ?? SAMPLE);
 
@@ -17,9 +18,12 @@ const els = {
   iframe: document.querySelector<HTMLIFrameElement>('#preview')!,
   status: document.querySelector<HTMLSpanElement>('#status')!,
   share: document.querySelector<HTMLButtonElement>('#share')!,
+  theme: document.querySelector<HTMLButtonElement>('#theme')!,
 };
 
 let current = '';
+
+const themeLabel = (t: Theme) => `Theme: ${t[0].toUpperCase()}${t.slice(1)}`;
 
 function setStatus(msg: string) {
   els.status.textContent = msg;
@@ -56,6 +60,11 @@ els.editor.addEventListener('input', () => {
 });
 
 els.files.addEventListener('change', () => openFile(els.files.value));
+
+els.theme.textContent = themeLabel(initTheme());
+els.theme.addEventListener('click', () => {
+  els.theme.textContent = themeLabel(cycleTheme());
+});
 
 els.share.addEventListener('click', async () => {
   const url = `${location.origin}${location.pathname}?files=${encodeFiles(fs.toJSON())}`;
