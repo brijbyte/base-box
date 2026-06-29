@@ -1,4 +1,4 @@
-import type { FileMap } from "./types";
+import type { FileMap } from './types';
 
 let registration: ServiceWorkerRegistration | null = null;
 
@@ -10,12 +10,12 @@ let registration: ServiceWorkerRegistration | null = null;
  * claim(), which is all we need.
  */
 export async function registerServiceWorker(): Promise<void> {
-  if (!("serviceWorker" in navigator)) {
-    throw new Error("Service workers are not supported in this browser.");
+  if (!('serviceWorker' in navigator)) {
+    throw new Error('Service workers are not supported in this browser.');
   }
-  registration = await navigator.serviceWorker.register("/sw.js", {
-    type: "module",
-    scope: "/",
+  registration = await navigator.serviceWorker.register('/sw.js', {
+    type: 'module',
+    scope: '/',
   });
   await navigator.serviceWorker.ready;
 }
@@ -32,7 +32,7 @@ function targetWorker(): ServiceWorker | null {
 export async function syncFiles(files: FileMap, retries = 3): Promise<number> {
   for (let attempt = 0; ; attempt++) {
     const worker = targetWorker();
-    if (!worker) throw new Error("No active service worker to sync with.");
+    if (!worker) throw new Error('No active service worker to sync with.');
     try {
       return await postOnce(worker, files, 4000);
     } catch (err) {
@@ -41,22 +41,29 @@ export async function syncFiles(files: FileMap, retries = 3): Promise<number> {
   }
 }
 
-function postOnce(worker: ServiceWorker, files: FileMap, timeout: number): Promise<number> {
+function postOnce(
+  worker: ServiceWorker,
+  files: FileMap,
+  timeout: number
+): Promise<number> {
   return new Promise((resolve, reject) => {
     const channel = new MessageChannel();
-    const timer = setTimeout(() => reject(new Error("SW sync timed out")), timeout);
+    const timer = setTimeout(
+      () => reject(new Error('SW sync timed out')),
+      timeout
+    );
     channel.port1.onmessage = (e) => {
       clearTimeout(timer);
-      if (e.data?.type === "files-loaded") resolve(e.data.count as number);
-      else reject(new Error("Unexpected SW reply"));
+      if (e.data?.type === 'files-loaded') resolve(e.data.count as number);
+      else reject(new Error('Unexpected SW reply'));
     };
-    worker.postMessage({ type: "load-files", files }, [channel.port2]);
+    worker.postMessage({ type: 'load-files', files }, [channel.port2]);
   });
 }
 
 /** Re-sync + refresh whenever a new SW takes control (it starts with an empty FS). */
 export function onControllerChange(handler: () => void): void {
-  navigator.serviceWorker.addEventListener("controllerchange", handler);
+  navigator.serviceWorker.addEventListener('controllerchange', handler);
 }
 
 /** Point the iframe at the SW-served preview, cache-busted to force a reload. */

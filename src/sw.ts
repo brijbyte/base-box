@@ -1,28 +1,35 @@
 /// <reference lib="webworker" />
-import "./polyfill";
-import * as esbuild from "esbuild-wasm/esm/browser.js";
-import esbuildWasmUrl from "esbuild-wasm/esbuild.wasm?url";
-import { init as initLexer, parse as parseImports } from "es-module-lexer";
-import { MemFS, normalizePath } from "./fs";
-import { isBare, resolveRelative } from "./resolve";
-import type { FileMap } from "./types";
+import './polyfill';
+import * as esbuild from 'esbuild-wasm/esm/browser.js';
+import esbuildWasmUrl from 'esbuild-wasm/esbuild.wasm?url';
+import { init as initLexer, parse as parseImports } from 'es-module-lexer';
+import { MemFS, normalizePath } from './fs';
+import { isBare, resolveRelative } from './resolve';
+import type { FileMap } from './types';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
-const FS_PREFIX = "/__fs/";
-const ESM_CDN = "https://esm.sh/";
+const FS_PREFIX = '/__fs/';
+const ESM_CDN = 'https://esm.sh/';
 
 let fs = new MemFS();
 
 const MIME: Record<string, string> = {
-  html: "text/html", js: "text/javascript", mjs: "text/javascript",
-  cjs: "text/javascript", ts: "text/javascript", tsx: "text/javascript",
-  jsx: "text/javascript", json: "application/json", css: "text/css", svg: "image/svg+xml",
+  html: 'text/html',
+  js: 'text/javascript',
+  mjs: 'text/javascript',
+  cjs: 'text/javascript',
+  ts: 'text/javascript',
+  tsx: 'text/javascript',
+  jsx: 'text/javascript',
+  json: 'application/json',
+  css: 'text/css',
+  svg: 'image/svg+xml',
 };
-const JS_EXTS = new Set(["js", "mjs", "cjs", "ts", "tsx", "jsx"]);
+const JS_EXTS = new Set(['js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx']);
 
-const ext = (p: string) => p.slice(p.lastIndexOf(".") + 1).toLowerCase();
-const contentType = (p: string) => MIME[ext(p)] ?? "text/plain";
+const ext = (p: string) => p.slice(p.lastIndexOf('.') + 1).toLowerCase();
+const contentType = (p: string) => MIME[ext(p)] ?? 'text/plain';
 
 // ---- esbuild + lexer init (once) ----
 let ready: Promise<void> | null = null;
@@ -48,12 +55,12 @@ async function getModule(path: string): Promise<string | undefined> {
   const cached = cache.get(path);
   if (cached && cached.src === src) return cached.out;
 
-  const loader = ext(path) as "ts" | "tsx" | "jsx" | "js";
+  const loader = ext(path) as 'ts' | 'tsx' | 'jsx' | 'js';
   const result = await esbuild.transform(src, {
     loader,
-    format: "esm",
-    jsx: "automatic",
-    sourcemap: "inline",
+    format: 'esm',
+    jsx: 'automatic',
+    sourcemap: 'inline',
     sourcefile: path,
   });
   const out = rewriteSpecifiers(path, result.code);
@@ -64,7 +71,7 @@ async function getModule(path: string): Promise<string | undefined> {
 /** Rewrite import specifiers: relative -> /__fs/<resolved>, bare -> esm.sh URL. */
 function rewriteSpecifiers(fromPath: string, code: string): string {
   const [imports] = parseImports(code);
-  let out = "";
+  let out = '';
   let last = 0;
   for (const imp of imports) {
     if (imp.n === undefined || imp.s < 0) continue; // dynamic/unanalyzable
@@ -85,10 +92,13 @@ function rewriteSpecifiers(fromPath: string, code: string): string {
 async function serveHtml(_path: string, html: string): Promise<Response> {
   const importMap = await buildImportMap();
   const tag = `<script type="importmap">${JSON.stringify({ imports: importMap })}</script>`;
-  const injected = html.includes("<head>")
-    ? html.replace("<head>", `<head>\n    ${tag}`)
+  const injected = html.includes('<head>')
+    ? html.replace('<head>', `<head>\n    ${tag}`)
     : tag + html;
-  return new Response(injected, { status: 200, headers: { "Content-Type": MIME.html } });
+  return new Response(injected, {
+    status: 200,
+    headers: { 'Content-Type': MIME.html },
+  });
 }
 
 /** Build { bareSpecifier -> esm.sh URL } from the transformed output of all modules. */
@@ -100,8 +110,12 @@ async function buildImportMap(): Promise<Record<string, string>> {
     if (src === undefined) continue;
     // Lex the transformed (pre-rewrite) code so esbuild-injected imports (jsx-runtime) count.
     await ensureReady();
-    const loader = ext(file) as "ts" | "tsx" | "jsx" | "js";
-    const { code } = await esbuild.transform(src, { loader, format: "esm", jsx: "automatic" });
+    const loader = ext(file) as 'ts' | 'tsx' | 'jsx' | 'js';
+    const { code } = await esbuild.transform(src, {
+      loader,
+      format: 'esm',
+      jsx: 'automatic',
+    });
     for (const imp of parseImports(code)[0]) {
       if (imp.n && isBare(imp.n)) imports[imp.n] = ESM_CDN + imp.n;
     }
@@ -110,45 +124,56 @@ async function buildImportMap(): Promise<Record<string, string>> {
 }
 
 // ---- lifecycle ----
-sw.addEventListener("install", () => sw.skipWaiting());
-sw.addEventListener("activate", (e) => e.waitUntil(sw.clients.claim()));
+sw.addEventListener('install', () => sw.skipWaiting());
+sw.addEventListener('activate', (e) => e.waitUntil(sw.clients.claim()));
 
-sw.addEventListener("message", (event) => {
+sw.addEventListener('message', (event) => {
   const data = event.data;
-  if (data?.type === "load-files") {
+  if (data?.type === 'load-files') {
     fs = new MemFS(data.files as FileMap);
     cache.clear();
-    event.ports[0]?.postMessage({ type: "files-loaded", count: fs.list().length });
+    event.ports[0]?.postMessage({
+      type: 'files-loaded',
+      count: fs.list().length,
+    });
   }
 });
 
-sw.addEventListener("fetch", (event) => {
+sw.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== sw.location.origin || !url.pathname.startsWith(FS_PREFIX)) return;
+  if (url.origin !== sw.location.origin || !url.pathname.startsWith(FS_PREFIX))
+    return;
   event.respondWith(serve(url.pathname.slice(FS_PREFIX.length)));
 });
 
 async function serve(rawPath: string): Promise<Response> {
-  const path = normalizePath(rawPath) || "index.html";
+  const path = normalizePath(rawPath) || 'index.html';
   const raw = fs.read(path);
-  if (raw === undefined) return new Response(`Not found in FS: ${path}`, { status: 404 });
+  if (raw === undefined)
+    return new Response(`Not found in FS: ${path}`, { status: 404 });
 
   try {
-    if (ext(path) === "html") {
+    if (ext(path) === 'html') {
       await ensureReady();
       return await serveHtml(path, raw);
     }
     if (JS_EXTS.has(ext(path))) {
       await ensureReady();
       const code = await getModule(path);
-      return new Response(code ?? raw, { status: 200, headers: { "Content-Type": MIME.js } });
+      return new Response(code ?? raw, {
+        status: 200,
+        headers: { 'Content-Type': MIME.js },
+      });
     }
-    return new Response(raw, { status: 200, headers: { "Content-Type": contentType(path) } });
+    return new Response(raw, {
+      status: 200,
+      headers: { 'Content-Type': contentType(path) },
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return new Response(`/* base-box transform error in ${path}:\n${msg}\n*/`, {
       status: 200,
-      headers: { "Content-Type": MIME.js },
+      headers: { 'Content-Type': MIME.js },
     });
   }
 }

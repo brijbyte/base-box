@@ -1,8 +1,8 @@
-import type { FileMap } from "./types";
+import type { FileMap } from './types';
 
 /** Default project shown when no `?files=` param is present: a React + TS app. */
 export const SAMPLE: FileMap = {
-  "index.html": `<!doctype html>
+  'index.html': `<!doctype html>
 <html>
   <head><meta charset="utf-8" /><title>base-box preview</title></head>
   <body>
@@ -11,12 +11,12 @@ export const SAMPLE: FileMap = {
   </body>
 </html>
 `,
-  "src/main.tsx": `import { createRoot } from "react-dom/client";
+  'src/main.tsx': `import { createRoot } from "react-dom/client";
 import { App } from "./App";
 
 createRoot(document.getElementById("root")!).render(<App />);
 `,
-  "src/App.tsx": `import { useState } from "react";
+  'src/App.tsx': `import { useState } from "react";
 
 type Props = { start?: number };
 

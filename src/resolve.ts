@@ -1,8 +1,8 @@
-import type { MemFS } from "./fs";
-import { normalizePath } from "./fs";
+import type { MemFS } from './fs';
+import { normalizePath } from './fs';
 
-const EXTS = ["", ".js", ".ts", ".tsx", ".jsx", ".mjs", ".cjs", ".json"];
-const INDEX = ["index.js", "index.ts", "index.tsx", "index.jsx", "index.mjs"];
+const EXTS = ['', '.js', '.ts', '.tsx', '.jsx', '.mjs', '.cjs', '.json'];
+const INDEX = ['index.js', 'index.ts', 'index.tsx', 'index.jsx', 'index.mjs'];
 
 /** A bare specifier points at an npm package (not "./", "../", "/", or a URL). */
 export function isBare(spec: string): boolean {
@@ -18,8 +18,10 @@ export function resolveRelative(
   spec: string,
   fs: MemFS
 ): string | null {
-  const dir = fromPath.includes("/") ? fromPath.slice(0, fromPath.lastIndexOf("/")) : "";
-  const base = spec.startsWith("/") ? spec : `${dir}/${spec}`;
+  const dir = fromPath.includes('/')
+    ? fromPath.slice(0, fromPath.lastIndexOf('/'))
+    : '';
+  const base = spec.startsWith('/') ? spec : `${dir}/${spec}`;
   const target = normalizePath(base);
 
   // 1. exact / with extension

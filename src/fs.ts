@@ -1,18 +1,18 @@
-import { Volume } from "memfs";
-import type { FileMap } from "./types";
+import { Volume } from 'memfs';
+import type { FileMap } from './types';
 
 /** Strip leading "./" and "/", collapse, resolve "." / ".." — returns slash-free path. */
 export function normalizePath(path: string): string {
   const parts: string[] = [];
-  for (const seg of path.split("/")) {
-    if (seg === "" || seg === ".") continue;
-    if (seg === "..") parts.pop();
+  for (const seg of path.split('/')) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') parts.pop();
     else parts.push(seg);
   }
-  return parts.join("/");
+  return parts.join('/');
 }
 
-const abs = (p: string) => "/" + normalizePath(p);
+const abs = (p: string) => '/' + normalizePath(p);
 
 /**
  * In-memory file system backed by `memfs` (a real Node-`fs` implementation).
@@ -35,7 +35,7 @@ export class MemFS {
 
   read(path: string): string | undefined {
     try {
-      return this.vol.readFileSync(abs(path), "utf8") as string;
+      return this.vol.readFileSync(abs(path), 'utf8') as string;
     } catch {
       return undefined;
     }
@@ -43,7 +43,7 @@ export class MemFS {
 
   write(path: string, content: string): void {
     const full = abs(path);
-    const dir = full.slice(0, full.lastIndexOf("/")) || "/";
+    const dir = full.slice(0, full.lastIndexOf('/')) || '/';
     this.vol.mkdirSync(dir, { recursive: true });
     this.vol.writeFileSync(full, content);
   }
@@ -70,7 +70,7 @@ export class MemFS {
   toJSON(): FileMap {
     const out: FileMap = {};
     for (const [p, content] of Object.entries(this.vol.toJSON())) {
-      if (typeof content === "string") out[normalizePath(p)] = content;
+      if (typeof content === 'string') out[normalizePath(p)] = content;
     }
     return out;
   }

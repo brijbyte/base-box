@@ -1,7 +1,7 @@
-import { defineConfig, type Plugin } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
+import { defineConfig, type Plugin } from 'vite';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
-const SW_ENTRY = "/src/sw.ts";
+const SW_ENTRY = '/src/sw.ts';
 
 /**
  * Serves the Service Worker at root scope (`/sw.js`) during dev so it can
@@ -10,17 +10,17 @@ const SW_ENTRY = "/src/sw.ts";
  */
 function serviceWorkerDev(): Plugin {
   return {
-    name: "base-box-sw-dev",
-    apply: "serve",
+    name: 'base-box-sw-dev',
+    apply: 'serve',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (req.url?.split("?")[0] !== "/sw.js") return next();
+        if (req.url?.split('?')[0] !== '/sw.js') return next();
         try {
           const result = await server.transformRequest(SW_ENTRY);
           if (!result) return next();
-          res.setHeader("Content-Type", "text/javascript");
-          res.setHeader("Service-Worker-Allowed", "/");
-          res.setHeader("Cache-Control", "no-cache");
+          res.setHeader('Content-Type', 'text/javascript');
+          res.setHeader('Service-Worker-Allowed', '/');
+          res.setHeader('Cache-Control', 'no-cache');
           res.end(result.code);
         } catch (err) {
           next(err);
@@ -32,5 +32,8 @@ function serviceWorkerDev(): Plugin {
 
 export default defineConfig({
   // nodePolyfills shims buffer/process/path/events etc. that memfs needs in the browser.
-  plugins: [nodePolyfills({ globals: { Buffer: true, process: true } }), serviceWorkerDev()],
+  plugins: [
+    nodePolyfills({ globals: { Buffer: true, process: true } }),
+    serviceWorkerDev(),
+  ],
 });
