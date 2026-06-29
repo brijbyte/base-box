@@ -1,5 +1,5 @@
 import './polyfill';
-import { MemFS } from './fs';
+import { MemFS, normalizePath } from './fs';
 import { filesFromUrl, encodeFiles } from './codec';
 import { SAMPLE } from './sample';
 import {
@@ -16,26 +16,34 @@ import {
   type Theme,
 } from './theme';
 import { createEditor } from './editor';
+import { createFileTree, type FileTreePanel } from './filetree';
 
 const fs = new MemFS(filesFromUrl() ?? SAMPLE);
 
 const els = {
-  files: document.querySelector<HTMLSelectElement>('#files')!,
+  tree: document.querySelector<HTMLDivElement>('#tree')!,
   editor: document.querySelector<HTMLDivElement>('#editor')!,
   iframe: document.querySelector<HTMLIFrameElement>('#preview')!,
   status: document.querySelector<HTMLSpanElement>('#status')!,
   share: document.querySelector<HTMLButtonElement>('#share')!,
   theme: document.querySelector<HTMLButtonElement>('#theme')!,
+  filename: document.querySelector<HTMLDivElement>('#filename')!,
+  newFile: document.querySelector<HTMLButtonElement>('#new')!,
+  rename: document.querySelector<HTMLButtonElement>('#rename')!,
+  del: document.querySelector<HTMLButtonElement>('#delete')!,
 };
 
 let current = '';
 let theme: Theme = initTheme();
+let panel: FileTreePanel;
 
 const themeLabel = (t: Theme) => `Theme: ${t[0].toUpperCase()}${t.slice(1)}`;
+const firstFile = () => fs.list()[0] ?? '';
 
 // Debounced write+rebuild on user edits.
 let debounce: ReturnType<typeof setTimeout>;
 const editor = createEditor(els.editor, (value) => {
+  if (!current) return;
   fs.write(current, value);
   clearTimeout(debounce);
   debounce = setTimeout(rebuild, 300);
@@ -45,18 +53,9 @@ function setStatus(msg: string) {
   els.status.textContent = msg;
 }
 
-function refreshFileList() {
-  els.files.innerHTML = '';
-  for (const path of fs.list()) {
-    const opt = document.createElement('option');
-    opt.value = opt.textContent = path;
-    els.files.append(opt);
-  }
-}
-
 function openFile(path: string) {
   current = path;
-  els.files.value = path;
+  els.filename.textContent = path || '(no file)';
   editor.setFile(path, fs.read(path) ?? '');
 }
 
@@ -67,22 +66,77 @@ async function rebuild() {
   setStatus(`synced ${count} files`);
 }
 
-els.files.addEventListener('change', () => openFile(els.files.value));
-
-function applyEditorTheme() {
-  editor.setDark(isDark(theme));
+// --- FS structural helpers (mirror tree mutations) ---
+function fsRemove(path: string) {
+  for (const f of fs.list()) {
+    if (f === path || f.startsWith(path + '/')) fs.delete(f);
+  }
+}
+function fsMove(from: string, to: string) {
+  for (const f of fs.list()) {
+    if (f === from || f.startsWith(from + '/')) {
+      const dest = to + f.slice(from.length);
+      fs.write(dest, fs.read(f) ?? '');
+      fs.delete(f);
+    }
+  }
 }
 
+// --- Tree → FS sync handlers ---
+function onAdd(path: string) {
+  if (!fs.has(path)) fs.write(path, '');
+  openFile(path);
+  rebuild();
+}
+function onRemove(path: string) {
+  fsRemove(path);
+  if (current === path || current.startsWith(path + '/')) {
+    const next = firstFile();
+    if (next) openFile(next);
+    else openFile('');
+  }
+  rebuild();
+}
+function onMove(from: string, to: string) {
+  fsMove(from, to);
+  if (current === from || current.startsWith(from + '/')) {
+    openFile(to + current.slice(from.length));
+  }
+  rebuild();
+}
+
+// --- Toolbar ---
+els.newFile.addEventListener('click', () => {
+  const input = prompt('New file path (e.g. src/util.ts):');
+  if (!input) return;
+  const path = normalizePath(input);
+  if (!path || fs.has(path)) return;
+  panel.add(path); // → onAdd
+  panel.select(path);
+});
+els.rename.addEventListener('click', () => {
+  const p = panel.selected() ?? current;
+  if (p) panel.startRename(p); // inline edit → onMove
+});
+els.del.addEventListener('click', () => {
+  const p = panel.selected() ?? current;
+  if (p) panel.remove(p); // → onRemove
+});
+
+// --- Theme ---
+function applyTheme() {
+  const dark = isDark(theme);
+  editor.setDark(dark);
+  panel?.setDark(dark);
+}
 els.theme.textContent = themeLabel(theme);
-applyEditorTheme();
 els.theme.addEventListener('click', () => {
   theme = cycleTheme();
   els.theme.textContent = themeLabel(theme);
-  applyEditorTheme();
+  applyTheme();
 });
-// Follow OS changes while in 'system' mode.
 onSystemThemeChange(() => {
-  if (theme === 'system') applyEditorTheme();
+  if (theme === 'system') applyTheme();
 });
 
 els.share.addEventListener('click', async () => {
@@ -95,12 +149,19 @@ els.share.addEventListener('click', async () => {
 async function boot() {
   setStatus('registering service worker…');
   await registerServiceWorker();
-  // A new SW takes over with an empty FS — re-sync and refresh when that happens.
   onControllerChange(() =>
     rebuild().catch((err) => setStatus(`error: ${err.message}`))
   );
-  refreshFileList();
-  openFile(fs.has('index.html') ? 'index.html' : fs.list()[0]);
+
+  const initial = fs.has('index.html') ? 'index.html' : firstFile();
+  panel = createFileTree(els.tree, fs.list(), initial, {
+    onOpen: openFile,
+    onAdd,
+    onRemove,
+    onMove,
+  });
+  openFile(initial);
+  applyTheme();
   await rebuild();
 }
 

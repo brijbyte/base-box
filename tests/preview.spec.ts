@@ -79,15 +79,38 @@ test('theme defaults to system and cycles + persists', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
-test('CodeMirror mounts and reflects file switches', async ({ page }) => {
+test('file tree switches the open file in CodeMirror', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#editor .cm-editor')).toBeVisible();
   await expect(page.locator('#editor .cm-gutters')).toBeVisible(); // line numbers
 
-  await page.selectOption('#files', 'index.html');
+  await page.getByRole('treeitem', { name: 'App.tsx' }).click();
+  await expect(page.locator('#filename')).toHaveText('src/App.tsx');
+  await expect(page.locator('#editor .cm-content')).toContainText('useState');
+
+  await page.getByRole('treeitem', { name: 'index.html' }).click();
+  await expect(page.locator('#filename')).toHaveText('index.html');
   await expect(page.locator('#editor .cm-content')).toContainText(
     '<!doctype html>'
   );
+});
+
+test('create and delete files via the tree', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  page.once('dialog', (d) => d.accept('src/extra.ts'));
+  await page.getByRole('button', { name: '+ File' }).click();
+
+  const extra = page.getByRole('treeitem', { name: 'extra.ts' });
+  await expect(extra).toBeVisible();
+  await expect(page.locator('#filename')).toHaveText('src/extra.ts');
+
+  // It's selected after creation; delete it.
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(page.getByRole('treeitem', { name: 'extra.ts' })).toHaveCount(0);
 });
 
 test('live edit updates the preview', async ({ page }) => {
@@ -99,7 +122,7 @@ test('live edit updates the preview', async ({ page }) => {
     timeout: 20000,
   });
 
-  await page.selectOption('#files', 'src/App.tsx');
+  await page.getByRole('treeitem', { name: 'App.tsx' }).click();
   const edited = `import { useState } from "react";
 export function App() {
   const [n] = useState(0);
