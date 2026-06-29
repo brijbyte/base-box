@@ -39,6 +39,7 @@
         --sidebar-bg: #f8f8f8;
         --selected-bg: #e4e6f1;
         --hover-bg: #f0f0f0;
+        --skeleton-sheen: rgba(255, 255, 255, 0.65);
         /* editor */
         --cm-bg: #ffffff;
         --cm-fg: #3b3b3b;
@@ -74,6 +75,7 @@
           --sidebar-bg: #181818;
           --selected-bg: #37373d;
           --hover-bg: #2a2d2e;
+          --skeleton-sheen: rgba(255, 255, 255, 0.07);
           --cm-bg: #1f1f1f;
           --cm-fg: #d4d4d4;
           --cm-cursor: #aeafad;
@@ -172,20 +174,13 @@
         min-height: 0;
       }
 
-      /* Per-pane loading overlay: covers the content area (below the 35px bar). */
+      /* Per-pane loading overlay: covers the content area (below the 35px bar).
+         Each pane shows a skeleton shaped like its eventual content. */
       .loading-overlay {
         position: absolute;
         inset: 35px 0 0 0;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        align-items: center;
-        justify-content: center;
         background: var(--bg);
-        color: var(--muted);
-        font-size: 12px;
-        text-align: center;
-        padding: 0 16px;
+        overflow: hidden;
         z-index: 5;
       }
       .pane.sidebar .loading-overlay {
@@ -194,31 +189,176 @@
       .loading-overlay[hidden] {
         display: none;
       }
-      .loading-overlay .spinner {
-        width: 22px;
-        height: 22px;
-        border: 2px solid var(--border);
-        border-top-color: var(--accent);
-        border-radius: 50%;
-        animation: spin 0.7s linear infinite;
+
+      /* Shimmer skeleton block: a muted bar with a sheen sweeping across it. */
+      .skeleton {
+        position: relative;
+        overflow: hidden;
+        background: var(--border);
+        border-radius: 3px;
       }
-      /* Error state: stop the spinner, tint the message. */
-      .loading-overlay[data-error] .spinner {
-        animation: none;
-        border-top-color: var(--border);
+      .skeleton::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--skeleton-sheen),
+          transparent
+        );
+        animation: shimmer 1.3s infinite;
       }
-      .loading-overlay[data-error] .loading-label {
-        color: #e5534b;
+      @keyframes shimmer {
+        to {
+          transform: translateX(100%);
+        }
       }
       @media (prefers-reduced-motion: reduce) {
-        .loading-overlay .spinner {
-          animation-duration: 2s;
+        .skeleton::after {
+          animation-duration: 3s;
         }
       }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+
+      /* Tree skeleton: indented file rows (icon + label). */
+      .sk-tree {
+        padding: 4px 0;
+      }
+      .sk-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 22px;
+        padding: 0 8px;
+      }
+      .sk-row.indent {
+        padding-left: 22px;
+      }
+      .sk-ico {
+        width: 14px;
+        height: 14px;
+        flex: none;
+      }
+      .sk-bar {
+        height: 9px;
+      }
+
+      /* Editor skeleton: gutter number + code line. */
+      .sk-editor {
+        padding: 8px 0;
+      }
+      .sk-line {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 19.5px;
+        padding: 0 10px 0 8px;
+      }
+      .sk-num {
+        width: 13px;
+        height: 9px;
+        flex: none;
+        opacity: 0.55;
+      }
+      .sk-code {
+        height: 9px;
+      }
+
+      /* Preview skeleton: a page-shaped block + a status/error label below. */
+      .sk-preview {
+        display: flex;
+        flex-direction: column;
+      }
+      .sk-preview-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px;
+      }
+      .sk-preview-body .skeleton {
+        height: 12px;
+      }
+      .sk-preview-body .sk-title {
+        height: 26px;
+        margin-bottom: 6px;
+      }
+      .sk-preview .loading-label {
+        padding: 8px 16px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+      /* Error: drop the skeleton, center the (red) message over the pane. */
+      .loading-overlay[data-error] .sk-preview-body {
+        display: none;
+      }
+      .loading-overlay[data-error] .loading-label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        color: #e5534b;
+      }
+
+      /* Preview error overlay: covers the preview content on compile/runtime errors.
+         Above the loading overlay (z 5) so it wins if both are momentarily shown. */
+      .error-overlay {
+        position: absolute;
+        inset: 35px 0 0 0;
+        overflow: auto;
+        padding: 16px;
+        background: var(--bg);
+        z-index: 6;
+      }
+      .error-overlay[hidden] {
+        display: none;
+      }
+      .error-card {
+        border: 1px solid #e5534b;
+        border-radius: 6px;
+        background: var(--control-bg);
+        overflow: hidden;
+      }
+      .error-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: rgba(229, 83, 75, 0.12);
+        border-bottom: 1px solid #e5534b;
+        color: #e5534b;
+        font-weight: 700;
+      }
+      .error-title {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .error-dismiss {
+        border: 0;
+        background: none;
+        color: inherit;
+        font-size: 16px;
+        line-height: 1;
+        padding: 0 4px;
+        cursor: pointer;
+      }
+      .error-dismiss:hover {
+        border-color: transparent;
+      }
+      .error-message {
+        margin: 0;
+        padding: 10px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        color: var(--fg);
+        font:
+          12px/1.5 ui-monospace,
+          monospace;
       }
 
       .pane > .bar {
@@ -402,25 +542,56 @@
           </span>
         </div>
         <div id="tree"></div>
-        <div class="loading-overlay" id="treeLoading">
-          <span class="spinner"></span>
-          <span class="loading-label">Loading files…</span>
+        <div class="loading-overlay sk-tree" id="treeLoading" aria-hidden="true">
+          <div class="sk-row"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar" style="width: 55%"></span></div>
+          <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar" style="width: 45%"></span></div>
+          <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar" style="width: 62%"></span></div>
+          <div class="sk-row"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar" style="width: 40%"></span></div>
+          <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar" style="width: 50%"></span></div>
+          <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar" style="width: 38%"></span></div>
+          <div class="sk-row"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar" style="width: 48%"></span></div>
         </div>
       </div>
       <div class="pane editor">
         <div class="bar"><span id="filename"></span></div>
         <div id="editor"></div>
-        <div class="loading-overlay" id="editorLoading">
-          <span class="spinner"></span>
-          <span class="loading-label">Loading editor…</span>
+        <div class="loading-overlay sk-editor" id="editorLoading" aria-hidden="true">
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 35%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 62%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 48%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 70%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 55%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 40%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 66%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 30%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 52%"></span></div>
+          <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code" style="width: 44%"></span></div>
         </div>
       </div>
       <div class="pane">
         <div class="bar">preview</div>
         <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
-        <div class="loading-overlay" id="previewLoading">
-          <span class="spinner"></span>
+        <div class="loading-overlay sk-preview" id="previewLoading">
+          <div class="sk-preview-body" aria-hidden="true">
+            <span class="skeleton sk-title" style="width: 45%"></span>
+            <span class="skeleton" style="width: 92%"></span>
+            <span class="skeleton" style="width: 80%"></span>
+            <span class="skeleton" style="width: 88%"></span>
+            <span class="skeleton" style="width: 70%"></span>
+            <span class="skeleton" style="width: 40%; height: 34px; margin-top: 8px"></span>
+          </div>
           <span class="loading-label" id="previewLabel">Starting…</span>
+        </div>
+        <div class="error-overlay" id="previewError" hidden>
+          <div class="error-card">
+            <div class="error-head">
+              <span class="error-title" id="errorTitle"></span>
+              <button class="error-dismiss" id="errorDismiss" title="Dismiss" aria-label="Dismiss error">×</button>
+            </div>
+            <pre class="error-message" id="errorMessage"></pre>
+          </div>
         </div>
       </div>
     </div>

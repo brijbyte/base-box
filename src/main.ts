@@ -30,6 +30,10 @@ const els = {
   editorLoading: document.querySelector<HTMLDivElement>('#editorLoading')!,
   previewLoading: document.querySelector<HTMLDivElement>('#previewLoading')!,
   previewLabel: document.querySelector<HTMLSpanElement>('#previewLabel')!,
+  previewError: document.querySelector<HTMLDivElement>('#previewError')!,
+  errorTitle: document.querySelector<HTMLSpanElement>('#errorTitle')!,
+  errorMessage: document.querySelector<HTMLPreElement>('#errorMessage')!,
+  errorDismiss: document.querySelector<HTMLButtonElement>('#errorDismiss')!,
 };
 
 let current = '';
@@ -52,6 +56,7 @@ const editor = createEditor(els.editor, (value) => {
 // Try to hot-swap the changed module; fall back to a full reload when the SW says so.
 async function hotUpdate(path: string, content: string) {
   setStatus('updating…');
+  clearPreviewError(); // stale error clears on edit; re-posted by the iframe if it recurs
   try {
     const { reload, boundaries } = await updateFile(path, content);
     if (reload) {
@@ -88,10 +93,38 @@ function setPreviewLabel(label: string) {
 
 /** Show the overlay, then (re)load the iframe; the `load` handler hides it. */
 function reloadPreview(label = 'Loading preview…') {
+  clearPreviewError(); // fresh load; the iframe re-posts any error that still applies
   setPreviewLabel(label);
   previewArmed = true;
   refreshPreview(els.iframe);
 }
+
+// --- Preview error overlay ---
+// The preview iframe (and the SW's compile-error stub) postMessage errors here; see hmr.ts.
+function clearPreviewError() {
+  els.previewError.hidden = true;
+}
+// Turn SW URLs (origin + /__fs/ + ?t stamps) into the project-relative FS path.
+const FS_URL_RE = new RegExp(`${location.origin}/__fs/([^?\\s)]*)(\\?t=\\d+)?`, 'g');
+const toRelativePaths = (s: string) => s.replace(FS_URL_RE, '$1');
+
+function showPreviewError(kind: string, message: string, file?: string) {
+  els.errorTitle.textContent =
+    kind === 'compile'
+      ? `Compile error${file ? ` — ${toRelativePaths(file)}` : ''}`
+      : 'Runtime error';
+  els.errorMessage.textContent = toRelativePaths(message);
+  els.previewError.hidden = false;
+}
+els.errorDismiss.addEventListener('click', clearPreviewError);
+window.addEventListener('message', (e: MessageEvent) => {
+  const d = e.data;
+  if (!d || d.source !== 'base-box-preview' || d.type !== 'error') return;
+  // WebKit stacks omit the message line, so show the message and append the stack.
+  const msg = d.message || 'Unknown error';
+  const body = d.stack && !d.stack.includes(msg) ? `${msg}\n\n${d.stack}` : d.stack || msg;
+  showPreviewError(d.kind, body, d.file);
+});
 
 function setPreviewError(msg: string) {
   previewArmed = false;

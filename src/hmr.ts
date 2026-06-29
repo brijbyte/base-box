@@ -74,6 +74,26 @@ export function hmrPreamble(path: string): string {
   return `import {createHotContext as __bbhot} from "/__fs/@hmr";import.meta.hot=__bbhot(${JSON.stringify(path)});\n`;
 }
 
+/** postMessage `source` tag for preview → host error reports (filtered on the host). */
+export const PREVIEW_MSG = 'base-box-preview';
+
+/**
+ * A stand-in module returned when esbuild/lightningcss fail to transform a file: it posts
+ * the compile error to the host (overlay) then throws to halt. The thrown message starts
+ * with `[base-box]` so the runtime error handler ignores it (no double report).
+ */
+export function compileErrorModule(file: string, message: string): string {
+  const payload = JSON.stringify({
+    source: PREVIEW_MSG,
+    type: 'error',
+    kind: 'compile',
+    file,
+    message,
+  });
+  const thrown = JSON.stringify(`[base-box] ${file}\n${message}`);
+  return `(window.parent||window).postMessage(${payload},"*");throw new Error(${thrown});`;
+}
+
 /**
  * The HMR client runtime, served at /__fs/@hmr. It owns `import.meta.hot` contexts and
  * applies `hmr` messages from the SW: re-import each boundary and hand the new module to
@@ -81,6 +101,21 @@ export function hmrPreamble(path: string): string {
  */
 export const HMR_CLIENT_JS = `
 const registry = new Map();
+const PREVIEW_MSG = ${JSON.stringify(PREVIEW_MSG)};
+
+// Report runtime errors to the host so it can show the preview error overlay.
+function report(kind, message, stack, file) {
+  (window.parent || window).postMessage({ source: PREVIEW_MSG, type: 'error', kind, message, stack, file }, '*');
+}
+window.addEventListener('error', (e) => {
+  const m = (e.error && e.error.message) || e.message || String(e);
+  if (typeof m === 'string' && m.indexOf('[base-box]') === 0) return; // compile stub already reported
+  report('runtime', m, e.error && e.error.stack, e.filename);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const r = e.reason;
+  report('runtime', (r && r.message) || String(r), r && r.stack);
+});
 
 export function createHotContext(id) {
   let mod = registry.get(id);

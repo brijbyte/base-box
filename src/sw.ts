@@ -13,6 +13,7 @@ import {
   detectAccept,
   planUpdate,
   hmrPreamble,
+  compileErrorModule,
   HMR_CLIENT_JS,
   type ModuleGraph,
 } from './hmr';
@@ -206,13 +207,19 @@ async function buildImportMap(): Promise<Record<string, string>> {
     // Lex the transformed (pre-rewrite) code so esbuild-injected imports (jsx-runtime) count.
     await ensureReady();
     const loader = ext(file) as 'ts' | 'tsx' | 'jsx' | 'js';
-    const { code } = await esbuild.transform(src, {
-      loader,
-      format: 'esm',
-      jsx: 'automatic',
-    });
-    for (const imp of parseImports(code)[0]) {
-      if (imp.n && isBare(imp.n)) bare.add(imp.n);
+    // A syntax error in one file must not break HTML serving; that file's own module
+    // fetch surfaces the compile error (the overlay). Just skip it for the import map.
+    try {
+      const { code } = await esbuild.transform(src, {
+        loader,
+        format: 'esm',
+        jsx: 'automatic',
+      });
+      for (const imp of parseImports(code)[0]) {
+        if (imp.n && isBare(imp.n)) bare.add(imp.n);
+      }
+    } catch {
+      continue;
     }
   }
   return buildImports(bare, deps, ESM_CDN);
@@ -332,7 +339,8 @@ async function serve(rawPath: string, destination = ''): Promise<Response> {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return new Response(`/* base-box transform error in ${path}:\n${msg}\n*/`, {
+    // Return a module that reports the compile error to the host overlay, then throws.
+    return new Response(compileErrorModule(path, msg), {
       status: 200,
       headers: { 'Content-Type': MIME.js },
     });

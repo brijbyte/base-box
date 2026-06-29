@@ -389,3 +389,42 @@ export function App() {
     }
   );
 });
+
+test('runtime error in user code shows the preview error overlay', async ({
+  page,
+}) => {
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/main.ts"></script></body></html>`,
+    'src/main.ts': `throw new Error("boom from user code");`,
+  });
+  await page.goto(`/?files=${files}`);
+
+  // The iframe's error handler posts the throw to the host → overlay shows.
+  await expect(page.locator('#previewError')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('#errorTitle')).toContainText('Runtime error');
+  const message = page.locator('#errorMessage');
+  await expect(message).toContainText('boom from user code');
+  // Stack frames show the project-relative path, not the internal /__fs/ SW URL.
+  await expect(message).toContainText('src/main.ts');
+  await expect(message).not.toContainText('/__fs/');
+});
+
+test('compile error (syntax) shows the preview error overlay & dismisses', async ({
+  page,
+}) => {
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/main.ts"></script></body></html>`,
+    'src/main.ts': `const x = (;`, // invalid syntax → esbuild transform throws in the SW
+  });
+  await page.goto(`/?files=${files}`);
+
+  // The SW's compile-error stub posts to the host instead of silently failing.
+  await expect(page.locator('#previewError')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('#errorTitle')).toContainText('Compile error');
+  await expect(page.locator('#errorTitle')).toContainText('src/main.ts');
+
+  await page.locator('#errorDismiss').click();
+  await expect(page.locator('#previewError')).toBeHidden();
+});

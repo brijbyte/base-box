@@ -1,5 +1,9 @@
 :root {
   color-scheme: light dark;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: #111;
+  }
 }
 
 body {
