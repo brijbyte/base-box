@@ -30,6 +30,25 @@ const view = EditorView.theme({
     border: 'none',
     color: 'var(--cm-gutter-fg)',
   },
+  // Lucide-chevron fold markers (see editor-setup.ts): inherit the gutter color,
+  // centered in the gutter cell, dimmed until the gutter is hovered (VS Code-style).
+  '.cm-foldGutter .cm-gutterElement': { display: 'flex', alignItems: 'center' },
+  '.cm-fold-marker': {
+    display: 'inline-flex',
+    color: 'var(--cm-gutter-fg)',
+    opacity: '0.65',
+    cursor: 'pointer',
+  },
+  '.cm-fold-marker:hover': { opacity: '1' },
+  '.cm-fold-marker svg': {
+    width: '16px',
+    height: '16px',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: '2',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+  },
   '.cm-matchingBracket, .cm-nonmatchingBracket': {
     backgroundColor: 'var(--cm-selection)',
     outline: '1px solid var(--cm-gutter-fg)',

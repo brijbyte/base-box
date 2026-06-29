@@ -1,7 +1,8 @@
-import { EditorView, basicSetup } from 'codemirror';
+import { EditorView } from '@codemirror/view';
 import { EditorState, Compartment, type Extension } from '@codemirror/state';
 import { indentUnit } from '@codemirror/language';
 import { forEachDiagnostic } from '@codemirror/lint';
+import { basicSetup } from './editor-setup';
 import { editorTheme } from './editor-theme';
 
 const ext = (path: string) =>
