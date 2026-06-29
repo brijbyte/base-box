@@ -1,5 +1,5 @@
 import './polyfill';
-import { MemFS, normalizePath } from './fs';
+import { MemFS } from './fs';
 import { filesFromUrl, encodeFiles } from './codec';
 import { SAMPLE } from './sample';
 import {
@@ -101,12 +101,7 @@ function onMove(from: string, to: string) {
 
 // --- Toolbar ---
 els.newFile.addEventListener('click', () => {
-  const input = prompt('New file path (e.g. src/util.ts):');
-  if (!input) return;
-  const path = normalizePath(input);
-  if (!path || fs.has(path)) return;
-  panel.add(path); // → onAdd
-  panel.select(path);
+  panel.startCreate(); // inline new-file: add placeholder + rename in place
 });
 els.rename.addEventListener('click', () => {
   const p = panel.selected() ?? current;

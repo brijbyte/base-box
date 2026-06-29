@@ -12,6 +12,8 @@ export interface FileTreePanel {
   add(path: string): void;
   remove(path: string): void;
   startRename(path: string): void;
+  /** Inline-create a file: add a placeholder in the selected dir and rename it in place. */
+  startCreate(): void;
   select(path: string): void;
   selected(): string | null;
 }
@@ -58,6 +60,25 @@ export function createFileTree(
     add: (p) => tree.add(p),
     remove: (p) => tree.remove(p, { recursive: true }),
     startRename: (p) => tree.startRenaming(p),
+    startCreate: () => {
+      // Target dir = the selected directory, the selected file's parent, else root.
+      const sel = tree.getSelectedPaths()[0] ?? tree.getFocusedPath();
+      let dir = '';
+      if (sel) {
+        const item = tree.getItem(sel);
+        dir = item?.isDirectory()
+          ? sel
+          : sel.includes('/')
+            ? sel.slice(0, sel.lastIndexOf('/'))
+            : '';
+      }
+      const base = dir ? `${dir}/` : '';
+      let path = `${base}untitled`;
+      for (let i = 1; tree.getItem(path); i++) path = `${base}untitled-${i}`;
+      // add → onAdd (placeholder); rename commit → onMove, cancel → onRemove.
+      tree.add(path);
+      tree.startRenaming(path, { removeIfCanceled: true });
+    },
     select: (p) => {
       // Exclusive selection: programmatic select() otherwise adds to the set.
       for (const s of tree.getSelectedPaths()) {

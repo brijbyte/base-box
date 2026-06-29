@@ -100,14 +100,23 @@ test('file tree switches the open file in CodeMirror', async ({ page }) => {
   );
 });
 
-test('create and delete files via the tree', async ({ page }) => {
+test('create and delete files via the tree (inline new-file)', async ({
+  page,
+}) => {
   await page.goto('/');
   await expect(page.locator('#status')).toContainText('synced', {
     timeout: 15000,
   });
 
-  page.once('dialog', (d) => d.accept('src/extra.ts'));
+  // Select a file in src so the new file is created inside src/.
+  await page.getByRole('treeitem', { name: 'App.tsx' }).click();
   await page.getByRole('button', { name: '+ File' }).click();
+
+  // Inline input appears with the placeholder text selected; type the real name.
+  const input = page.locator('input[data-item-rename-input]');
+  await expect(input).toBeVisible();
+  await input.fill('extra.ts');
+  await input.press('Enter');
 
   const extra = page.getByRole('treeitem', { name: 'extra.ts' });
   await expect(extra).toBeVisible();
@@ -116,6 +125,22 @@ test('create and delete files via the tree', async ({ page }) => {
   // It's selected after creation; delete it.
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByRole('treeitem', { name: 'extra.ts' })).toHaveCount(0);
+});
+
+test('canceling inline new-file (Escape) leaves no file', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  await page.getByRole('button', { name: '+ File' }).click();
+  const input = page.locator('input[data-item-rename-input]');
+  await expect(input).toBeVisible();
+  await input.press('Escape');
+
+  // Placeholder removed; no stray "untitled" file remains.
+  await expect(page.getByRole('treeitem', { name: /untitled/ })).toHaveCount(0);
+  await expect(input).toHaveCount(0);
 });
 
 test('live edit updates the preview', async ({ page }) => {
