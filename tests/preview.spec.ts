@@ -79,6 +79,17 @@ test('theme defaults to system and cycles + persists', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
+test('CodeMirror mounts and reflects file switches', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#editor .cm-editor')).toBeVisible();
+  await expect(page.locator('#editor .cm-gutters')).toBeVisible(); // line numbers
+
+  await page.selectOption('#files', 'index.html');
+  await expect(page.locator('#editor .cm-content')).toContainText(
+    '<!doctype html>'
+  );
+});
+
 test('live edit updates the preview', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#status')).toContainText('synced', {
@@ -94,7 +105,10 @@ export function App() {
   const [n] = useState(0);
   return <h1>Edited {n}</h1>;
 }`;
-  await page.fill('#editor', edited);
+  // CodeMirror is contenteditable, not a textarea: select-all then bulk-insert.
+  await page.locator('#editor .cm-content').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.insertText(edited);
 
   await expect(page.frameLocator('#preview').locator('h1')).toHaveText(
     'Edited 0',

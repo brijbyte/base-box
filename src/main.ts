@@ -8,13 +8,20 @@ import {
   refreshPreview,
   onControllerChange,
 } from './preview';
-import { initTheme, cycleTheme, type Theme } from './theme';
+import {
+  initTheme,
+  cycleTheme,
+  isDark,
+  onSystemThemeChange,
+  type Theme,
+} from './theme';
+import { createEditor } from './editor';
 
 const fs = new MemFS(filesFromUrl() ?? SAMPLE);
 
 const els = {
   files: document.querySelector<HTMLSelectElement>('#files')!,
-  editor: document.querySelector<HTMLTextAreaElement>('#editor')!,
+  editor: document.querySelector<HTMLDivElement>('#editor')!,
   iframe: document.querySelector<HTMLIFrameElement>('#preview')!,
   status: document.querySelector<HTMLSpanElement>('#status')!,
   share: document.querySelector<HTMLButtonElement>('#share')!,
@@ -22,8 +29,17 @@ const els = {
 };
 
 let current = '';
+let theme: Theme = initTheme();
 
 const themeLabel = (t: Theme) => `Theme: ${t[0].toUpperCase()}${t.slice(1)}`;
+
+// Debounced write+rebuild on user edits.
+let debounce: ReturnType<typeof setTimeout>;
+const editor = createEditor(els.editor, (value) => {
+  fs.write(current, value);
+  clearTimeout(debounce);
+  debounce = setTimeout(rebuild, 300);
+});
 
 function setStatus(msg: string) {
   els.status.textContent = msg;
@@ -41,7 +57,7 @@ function refreshFileList() {
 function openFile(path: string) {
   current = path;
   els.files.value = path;
-  els.editor.value = fs.read(path) ?? '';
+  editor.setFile(path, fs.read(path) ?? '');
 }
 
 async function rebuild() {
@@ -51,19 +67,22 @@ async function rebuild() {
   setStatus(`synced ${count} files`);
 }
 
-// Debounced write+rebuild on edit.
-let debounce: ReturnType<typeof setTimeout>;
-els.editor.addEventListener('input', () => {
-  fs.write(current, els.editor.value);
-  clearTimeout(debounce);
-  debounce = setTimeout(rebuild, 300);
-});
-
 els.files.addEventListener('change', () => openFile(els.files.value));
 
-els.theme.textContent = themeLabel(initTheme());
+function applyEditorTheme() {
+  editor.setDark(isDark(theme));
+}
+
+els.theme.textContent = themeLabel(theme);
+applyEditorTheme();
 els.theme.addEventListener('click', () => {
-  els.theme.textContent = themeLabel(cycleTheme());
+  theme = cycleTheme();
+  els.theme.textContent = themeLabel(theme);
+  applyEditorTheme();
+});
+// Follow OS changes while in 'system' mode.
+onSystemThemeChange(() => {
+  if (theme === 'system') applyEditorTheme();
 });
 
 els.share.addEventListener('click', async () => {
