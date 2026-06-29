@@ -3,8 +3,12 @@ import './polyfill';
 import * as esbuild from 'esbuild-wasm/esm/browser.js';
 import esbuildWasmUrl from 'esbuild-wasm/esbuild.wasm?url';
 import { init as initLexer, parse as parseImports } from 'es-module-lexer';
+import initCss, { transform as transformCss } from 'lightningcss-wasm';
+import cssWasmUrl from 'lightningcss-wasm/lightningcss_node.wasm?url';
 import { MemFS, normalizePath } from './fs';
 import { isBare, resolveRelative } from './resolve';
+import { parseDeps, buildImports } from './packages';
+import { cssModuleToJs } from './css';
 import type { FileMap } from './types';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
@@ -74,8 +78,41 @@ function ensureReady(): Promise<void> {
   return ready;
 }
 
+// lightningcss is only needed for `.module.css`, so init it lazily (not in ensureReady,
+// which runs for every JS/HTML serve). Its wasm is small enough to lean on the HTTP cache
+// (assets are `immutable`-cached, see §10) — no Cache-Storage stashing like esbuild.
+let cssReady: Promise<void> | null = null;
+function ensureCssReady(): Promise<void> {
+  if (!cssReady) cssReady = initCss(cssWasmUrl);
+  return cssReady;
+}
+
 // ---- transform cache keyed by content ----
 const cache = new Map<string, { src: string; out: string }>();
+const cssCache = new Map<string, { src: string; out: string }>();
+
+const isCssModule = (p: string) => p.endsWith('.module.css');
+
+/** Compile a CSS-module file to a JS module: scoped CSS injected + class-name map exported. */
+function getCssModule(path: string): string {
+  const src = fs.read(path) ?? '';
+  const cached = cssCache.get(path);
+  if (cached && cached.src === src) return cached.out;
+
+  const { code, exports } = transformCss({
+    filename: path,
+    code: new TextEncoder().encode(src),
+    cssModules: true,
+  });
+  const css = new TextDecoder().decode(code);
+  const tokens: Record<string, string> = {};
+  for (const [orig, exp] of Object.entries(exports ?? {}))
+    tokens[orig] = exp.name;
+
+  const out = cssModuleToJs(path, css, tokens);
+  cssCache.set(path, { src, out });
+  return out;
+}
 
 /** Transform a JS/TS/JSX file to ESM and rewrite its import specifiers. */
 async function getModule(path: string): Promise<string | undefined> {
@@ -131,9 +168,13 @@ async function serveHtml(_path: string, html: string): Promise<Response> {
   });
 }
 
-/** Build { bareSpecifier -> esm.sh URL } from the transformed output of all modules. */
+/**
+ * Build { bareSpecifier -> esm.sh URL } from the transformed output of all modules,
+ * version-pinned and deduped from package.json (see `packages.ts`).
+ */
 async function buildImportMap(): Promise<Record<string, string>> {
-  const imports: Record<string, string> = {};
+  const deps = parseDeps(fs.read('package.json'));
+  const bare = new Set<string>();
   for (const file of fs.list()) {
     if (!JS_EXTS.has(ext(file))) continue;
     const src = fs.read(file);
@@ -147,10 +188,10 @@ async function buildImportMap(): Promise<Record<string, string>> {
       jsx: 'automatic',
     });
     for (const imp of parseImports(code)[0]) {
-      if (imp.n && isBare(imp.n)) imports[imp.n] = ESM_CDN + imp.n;
+      if (imp.n && isBare(imp.n)) bare.add(imp.n);
     }
   }
-  return imports;
+  return buildImports(bare, deps, ESM_CDN);
 }
 
 // ---- lifecycle ----
@@ -162,6 +203,7 @@ sw.addEventListener('message', (event) => {
   if (data?.type === 'load-files') {
     fs = new MemFS(data.files as FileMap);
     cache.clear();
+    cssCache.clear();
     event.ports[0]?.postMessage({
       type: 'files-loaded',
       count: fs.list().length,
@@ -186,6 +228,13 @@ async function serve(rawPath: string): Promise<Response> {
     if (ext(path) === 'html') {
       await ensureReady();
       return await serveHtml(path, raw);
+    }
+    if (isCssModule(path)) {
+      await ensureCssReady();
+      return new Response(getCssModule(path), {
+        status: 200,
+        headers: { 'Content-Type': MIME.js },
+      });
     }
     if (JS_EXTS.has(ext(path))) {
       await ensureReady();

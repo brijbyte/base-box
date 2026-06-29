@@ -1,10 +1,26 @@
 import { test, expect } from '@playwright/test';
 import { encodeFiles } from '../src/codec';
 
+// A minimal React counter, injected explicitly so render/edit tests don't depend on
+// whatever the default SAMPLE happens to be (currently a network-heavy Base UI demo).
+const COUNTER = {
+  'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/main.tsx"></script></body></html>`,
+  'src/main.tsx': `import { createRoot } from "react-dom/client";
+import { App } from "./App";
+createRoot(document.getElementById("root")!).render(<App />);`,
+  'src/App.tsx': `import { useState } from "react";
+export function App() {
+  const [count, setCount] = useState(0);
+  return <main><h1>base-box ⚡️</h1>
+    <button onClick={() => setCount((c) => c + 1)}>count is {count}</button></main>;
+}`,
+};
+
 test('renders React + TS sample via esbuild transform + esm.sh import map (WebKit)', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto(`/?files=${await encodeFiles(COUNTER)}`);
   await expect(page.locator('#status')).toContainText('synced', {
     timeout: 15000,
   });
@@ -41,8 +57,72 @@ document.getElementById("o")!.innerHTML = "<h1>total " + total + "</h1>";`,
   await expect(frame.locator('h1')).toHaveText('total 5', { timeout: 10000 });
 });
 
+test('pins esm.sh versions & dedupes from package.json', async ({ page }) => {
+  const files = await encodeFiles({
+    'package.json': JSON.stringify({
+      dependencies: { react: '18.3.1', 'react-dom': '18.3.1' },
+    }),
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/main.tsx"></script></body></html>`,
+    'src/main.tsx': `import { createRoot } from "react-dom/client";
+import { useState } from "react";
+function App() { const [n] = useState(7); return <h1>pinned {n}</h1>; }
+createRoot(document.getElementById("root")!).render(<App />);`,
+  });
+  await page.goto(`/?files=${files}`);
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  // Renders with the pinned React (proves the deduped import map resolves).
+  const frame = page.frameLocator('#preview');
+  await expect(frame.locator('h1')).toHaveText('pinned 7', { timeout: 20000 });
+
+  // The SW-injected import map pins versions in the path (no query — dedupe relies on
+  // esm.sh routing pinned versions to one canonical module).
+  const map = await page.evaluate(async () => {
+    const html = await (await fetch('/__fs/index.html')).text();
+    const m = html.match(/<script type="importmap">(.*?)<\/script>/s);
+    return m ? JSON.parse(m[1]).imports : null;
+  });
+  expect(map.react).toBe('https://esm.sh/react@18.3.1');
+  expect(map['react-dom/client']).toBe(
+    'https://esm.sh/react-dom@18.3.1/client'
+  );
+  // Bare entry present even though react-dom's root is never imported directly.
+  expect(map['react-dom']).toBe('https://esm.sh/react-dom@18.3.1');
+  // Trailing-slash prefix resolves any deep subpath (incl. ones we never lexed).
+  expect(map['react-dom/']).toBe('https://esm.sh/react-dom@18.3.1/');
+});
+
+test('CSS modules: scopes class names & injects styles (lightningcss)', async ({
+  page,
+}) => {
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="o"></div>
+<script type="module" src="./src/main.ts"></script></body></html>`,
+    'src/main.ts': `import styles from "./app.module.css";
+const el = document.getElementById("o")!;
+el.className = styles.title;
+el.textContent = styles.title;`,
+    'src/app.module.css': `.title { color: rgb(10, 20, 30); }`,
+  });
+  await page.goto(`/?files=${files}`);
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  const frame = page.frameLocator('#preview');
+  const o = frame.locator('#o');
+  // Default export maps `title` -> a scoped name (not the literal "title").
+  await expect(o).not.toHaveText('title', { timeout: 15000 });
+  await expect(o).not.toBeEmpty();
+  // The injected <style> actually applies (scoped selector matched the element).
+  await expect(o).toHaveCSS('color', 'rgb(10, 20, 30)');
+});
+
 test('caches esbuild.wasm in Cache Storage', async ({ page }) => {
-  await page.goto('/');
+  await page.goto(`/?files=${await encodeFiles(COUNTER)}`);
   await expect(page.locator('#status')).toContainText('synced', {
     timeout: 15000,
   });
@@ -91,12 +171,12 @@ test('file tree switches the open file in CodeMirror', async ({ page }) => {
 
   await page.getByRole('treeitem', { name: 'App.tsx' }).click();
   await expect(page.locator('#filename')).toHaveText('src/App.tsx');
-  await expect(page.locator('#editor .cm-content')).toContainText('useState');
+  await expect(page.locator('#editor .cm-content')).toContainText('Combobox');
 
   await page.getByRole('treeitem', { name: 'index.html' }).click();
   await expect(page.locator('#filename')).toHaveText('index.html');
   await expect(page.locator('#editor .cm-content')).toContainText(
-    '<!doctype html>'
+    'Base UI Example'
   );
 });
 
@@ -144,7 +224,7 @@ test('canceling inline new-file (Escape) leaves no file', async ({ page }) => {
 });
 
 test('live edit updates the preview', async ({ page }) => {
-  await page.goto('/');
+  await page.goto(`/?files=${await encodeFiles(COUNTER)}`);
   await expect(page.locator('#status')).toContainText('synced', {
     timeout: 15000,
   });

@@ -38,6 +38,7 @@
     "codemirror": "^6.0.2",
     "es-module-lexer": "^2.2.0",
     "esbuild-wasm": "^0.28.1",
+    "lightningcss-wasm": "^1.32.0",
     "memfs": "^4.57.8"
   }
 }
