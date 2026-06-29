@@ -72,6 +72,9 @@ export function createFileTree(
             ? sel.slice(0, sel.lastIndexOf('/'))
             : '';
       }
+      // @pierre/trees reports directory paths with a trailing slash ("src/"); strip it
+      // so the join below doesn't produce "src//untitled" (an empty, phantom folder).
+      dir = dir.replace(/\/+$/, '');
       const base = dir ? `${dir}/` : '';
       let path = `${base}untitled`;
       for (let i = 1; tree.getItem(path); i++) path = `${base}untitled-${i}`;

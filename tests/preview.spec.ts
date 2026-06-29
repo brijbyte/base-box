@@ -229,6 +229,28 @@ test('create and delete files via the tree (inline new-file)', async ({
   await expect(page.getByRole('treeitem', { name: 'extra.ts' })).toHaveCount(0);
 });
 
+test('new file inside a selected folder is not nested in a phantom dir', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.locator('#status')).toContainText('synced', {
+    timeout: 15000,
+  });
+
+  // Select the `src` *directory* (its selected path comes back as "src/").
+  await page.getByRole('treeitem', { name: 'src' }).click();
+  await page.getByRole('button', { name: 'New File' }).click();
+
+  const input = page.locator('input[data-item-rename-input]');
+  await expect(input).toBeVisible();
+  await input.fill('indir.ts');
+  await input.press('Enter');
+
+  // Created directly under src/ — not under an empty-named ("src//indir.ts") folder.
+  await expect(page.locator('#filename')).toHaveText('src/indir.ts');
+  await expect(page.getByRole('treeitem', { name: 'indir.ts' })).toBeVisible();
+});
+
 test('canceling inline new-file (Escape) leaves no file', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#status')).toContainText('synced', {
