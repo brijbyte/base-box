@@ -12,8 +12,18 @@ import {
 import { initTheme, cycleTheme, type Theme } from './theme';
 import { createEditor } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
+import { createLspClient, lspSupportsPath, type LspClient } from './lsp/client';
 
 const fs = new MemFS((await filesFromUrl()) ?? SAMPLE);
+
+// TypeScript language server (worker): autocomplete, diagnostics, hover.
+// Spawned lazily on the first TS/JS file opened — it pulls TS from a CDN, so a
+// project that never opens a code file (or only HTML/CSS) never pays for it.
+let lsp: LspClient | null = null;
+function ensureLsp(): LspClient {
+  if (!lsp) lsp = createLspClient(fs.toJSON());
+  return lsp;
+}
 
 const els = {
   tree: document.querySelector<HTMLDivElement>('#tree')!,
@@ -45,13 +55,20 @@ const firstFile = () => fs.list()[0] ?? '';
 
 // Debounced write + hot update on user edits.
 let debounce: ReturnType<typeof setTimeout>;
-const editor = createEditor(els.editor, (value) => {
-  if (!current) return;
-  fs.write(current, value);
-  const path = current;
-  clearTimeout(debounce);
-  debounce = setTimeout(() => hotUpdate(path, value), 300);
-});
+const editor = createEditor(
+  els.editor,
+  (value) => {
+    if (!current) return;
+    fs.write(current, value);
+    const path = current;
+    clearTimeout(debounce);
+    debounce = setTimeout(() => hotUpdate(path, value), 300);
+  },
+  {
+    lspSupport: (path) =>
+      lspSupportsPath(path) ? ensureLsp().support(path) : [],
+  }
+);
 
 // Try to hot-swap the changed module; fall back to a full reload when the SW says so.
 async function hotUpdate(path: string, content: string) {
@@ -105,7 +122,10 @@ function clearPreviewError() {
   els.previewError.hidden = true;
 }
 // Turn SW URLs (origin + /__fs/ + ?t stamps) into the project-relative FS path.
-const FS_URL_RE = new RegExp(`${location.origin}/__fs/([^?\\s)]*)(\\?t=\\d+)?`, 'g');
+const FS_URL_RE = new RegExp(
+  `${location.origin}/__fs/([^?\\s)]*)(\\?t=\\d+)?`,
+  'g'
+);
 const toRelativePaths = (s: string) => s.replace(FS_URL_RE, '$1');
 
 function showPreviewError(kind: string, message: string, file?: string) {
@@ -122,7 +142,8 @@ window.addEventListener('message', (e: MessageEvent) => {
   if (!d || d.source !== 'base-box-preview' || d.type !== 'error') return;
   // WebKit stacks omit the message line, so show the message and append the stack.
   const msg = d.message || 'Unknown error';
-  const body = d.stack && !d.stack.includes(msg) ? `${msg}\n\n${d.stack}` : d.stack || msg;
+  const body =
+    d.stack && !d.stack.includes(msg) ? `${msg}\n\n${d.stack}` : d.stack || msg;
   showPreviewError(d.kind, body, d.file);
 });
 
@@ -141,6 +162,7 @@ function openFile(path: string) {
 
 async function rebuild() {
   setStatus('syncing…');
+  lsp?.sync(fs.toJSON()); // keep the language server's file map current (if running)
   const count = await syncFiles(fs.toJSON());
   reloadPreview('Compiling…');
   setStatus(`synced ${count} files`);

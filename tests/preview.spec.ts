@@ -428,3 +428,75 @@ test('compile error (syntax) shows the preview error overlay & dismisses', async
   await page.locator('#errorDismiss').click();
   await expect(page.locator('#previewError')).toBeHidden();
 });
+
+// --- TypeScript language server (Volar in a worker, types from jsdelivr) ---
+// These boot a real TS engine from a CDN on first open, so they're given long timeouts.
+const LSP_TIMEOUT = 30000;
+
+// Open a TS file in the editor (the LSP only attaches to the focused code file).
+async function openTsFile(page: import('@playwright/test').Page, name: string) {
+  await page.getByRole('treeitem', { name }).click();
+  await page.locator('#editor .cm-content').click();
+}
+
+test('LSP: reports type-error diagnostics from the TS server', async ({
+  page,
+}) => {
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/App.tsx"></script></body></html>`,
+    'src/App.tsx': `const x: number = "not a number";\nexport {};\n`,
+  });
+  await page.goto(`/?files=${files}`);
+  await openTsFile(page, 'App.tsx');
+
+  // Volar pushes publishDiagnostics → CM renders an error squiggle.
+  await expect(page.locator('#editor .cm-lintRange-error').first()).toBeVisible(
+    {
+      timeout: LSP_TIMEOUT,
+    }
+  );
+});
+
+test('LSP: autocomplete offers type-aware completions', async ({ page }) => {
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/App.tsx"></script></body></html>`,
+    'src/App.tsx': `const greeting = "hello";\nexport {};\n`,
+  });
+  await page.goto(`/?files=${files}`);
+  await openTsFile(page, 'App.tsx');
+  // Wait for the server to be ready (diagnostics is a cheap readiness signal: none here).
+  await page.waitForTimeout(12000);
+
+  // Type `greeting.` and ask for completions; string members should appear.
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.insertText('const greeting = "hello";\ngreeting.');
+  await page.keyboard.press('Control+Space');
+  const tip = page.locator('.cm-tooltip-autocomplete');
+  await expect(tip).toBeVisible({ timeout: LSP_TIMEOUT });
+  await expect(tip).toContainText('toUpperCase');
+});
+
+test('LSP: hover shows inferred type info', async ({ page }) => {
+  const files = await encodeFiles({
+    'index.html': `<!doctype html><html><head></head><body><div id="root"></div>
+<script type="module" src="./src/App.tsx"></script></body></html>`,
+    'src/App.tsx': `const myValue = 42;\nconsole.log(myValue);\nexport {};\n`,
+  });
+  await page.goto(`/?files=${files}`);
+  await openTsFile(page, 'App.tsx');
+  await page.waitForTimeout(12000);
+
+  // Hover the `myValue` usage on line 2 → type tooltip.
+  await page
+    .locator('#editor .cm-content .cm-line')
+    .nth(1)
+    .getByText('myValue')
+    .first()
+    .hover();
+  await expect(page.locator('.cm-lsp-hover-tooltip')).toContainText(
+    'const myValue: 42',
+    { timeout: LSP_TIMEOUT }
+  );
+});

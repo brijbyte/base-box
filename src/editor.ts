@@ -40,13 +40,20 @@ export interface Editor {
   focus(): void;
 }
 
+export interface EditorOptions {
+  /** Per-file language-server extension (completion/diagnostics/hover). */
+  lspSupport?: (path: string) => Extension;
+}
+
 /** A CodeMirror 6 editor. `onChange` fires only on user edits, not programmatic loads.
  *  Theming is CSS-variable driven (see editor-theme.ts) — light/dark follow `data-theme`. */
 export function createEditor(
   parent: HTMLElement,
-  onChange: (value: string) => void
+  onChange: (value: string) => void,
+  options: EditorOptions = {}
 ): Editor {
   const language = new Compartment();
+  const lsp = new Compartment(); // per-file language-server support
   let suppress = false; // ignore change events during programmatic file loads
 
   const view = new EditorView({
@@ -56,6 +63,7 @@ export function createEditor(
         basicSetup,
         editorTheme,
         language.of([]),
+        lsp.of([]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !suppress) onChange(view.state.doc.toString());
         }),
@@ -68,7 +76,11 @@ export function createEditor(
       suppress = true;
       view.dispatch({
         changes: { from: 0, to: view.state.doc.length, insert: content },
-        effects: language.reconfigure(languageFor(path)),
+        effects: [
+          language.reconfigure(languageFor(path)),
+          // Reconfiguring closes the previous file's LSP doc and opens this one.
+          lsp.reconfigure(options.lspSupport?.(path) ?? []),
+        ],
       });
       suppress = false;
     },
