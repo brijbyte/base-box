@@ -26,6 +26,10 @@ const els = {
   newFile: document.querySelector<HTMLButtonElement>('#new')!,
   rename: document.querySelector<HTMLButtonElement>('#rename')!,
   del: document.querySelector<HTMLButtonElement>('#delete')!,
+  treeLoading: document.querySelector<HTMLDivElement>('#treeLoading')!,
+  editorLoading: document.querySelector<HTMLDivElement>('#editorLoading')!,
+  previewLoading: document.querySelector<HTMLDivElement>('#previewLoading')!,
+  previewLabel: document.querySelector<HTMLSpanElement>('#previewLabel')!,
 };
 
 let current = '';
@@ -51,7 +55,7 @@ async function hotUpdate(path: string, content: string) {
   try {
     const { reload, boundaries } = await updateFile(path, content);
     if (reload) {
-      refreshPreview(els.iframe);
+      reloadPreview('Reloading…');
       setStatus(`reloaded (${path})`);
     } else {
       setStatus(`hot-updated ${boundaries.join(', ') || path}`);
@@ -65,6 +69,37 @@ function setStatus(msg: string) {
   els.status.textContent = msg;
 }
 
+// --- Preview loading overlay ---
+// `load` on a module-script iframe fires only after the module graph evaluates (i.e. the
+// app has rendered), so it's a reliable "preview ready" signal. `armed` ignores the
+// initial about:blank load that fires before we ever set a real src.
+let previewArmed = false;
+els.iframe.addEventListener('load', () => {
+  if (!previewArmed) return;
+  previewArmed = false;
+  els.previewLoading.hidden = true;
+});
+
+function setPreviewLabel(label: string) {
+  els.previewLabel.textContent = label;
+  els.previewLoading.removeAttribute('data-error');
+  els.previewLoading.hidden = false;
+}
+
+/** Show the overlay, then (re)load the iframe; the `load` handler hides it. */
+function reloadPreview(label = 'Loading preview…') {
+  setPreviewLabel(label);
+  previewArmed = true;
+  refreshPreview(els.iframe);
+}
+
+function setPreviewError(msg: string) {
+  previewArmed = false;
+  els.previewLabel.textContent = msg;
+  els.previewLoading.setAttribute('data-error', '');
+  els.previewLoading.hidden = false;
+}
+
 function openFile(path: string) {
   current = path;
   els.filename.textContent = path || '(no file)';
@@ -74,7 +109,7 @@ function openFile(path: string) {
 async function rebuild() {
   setStatus('syncing…');
   const count = await syncFiles(fs.toJSON());
-  refreshPreview(els.iframe);
+  reloadPreview('Compiling…');
   setStatus(`synced ${count} files`);
 }
 
@@ -147,12 +182,8 @@ els.share.addEventListener('click', async () => {
 });
 
 async function boot() {
-  setStatus('registering service worker…');
-  await registerServiceWorker();
-  onControllerChange(() =>
-    rebuild().catch((err) => setStatus(`error: ${err.message}`))
-  );
-
+  // Chrome renders immediately from the already-decoded FS — only the preview waits on
+  // the service worker + esbuild-wasm, so reveal the tree/editor first.
   const initial = fs.has('index.html') ? 'index.html' : firstFile();
   panel = createFileTree(els.tree, fs.list(), initial, {
     onOpen: openFile,
@@ -160,8 +191,20 @@ async function boot() {
     onRemove,
     onMove,
   });
+  els.treeLoading.hidden = true;
   openFile(initial);
+  els.editorLoading.hidden = true;
+
+  setPreviewLabel('Starting service worker…');
+  setStatus('registering service worker…');
+  await registerServiceWorker();
+  onControllerChange(() =>
+    rebuild().catch((err) => setStatus(`error: ${err.message}`))
+  );
   await rebuild();
 }
 
-boot().catch((err) => setStatus(`error: ${err.message}`));
+boot().catch((err) => {
+  setStatus(`error: ${err.message}`);
+  setPreviewError(`Failed to start: ${err.message}`);
+});

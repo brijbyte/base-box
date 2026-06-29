@@ -165,10 +165,60 @@
       }
 
       .pane {
+        position: relative;
         display: flex;
         flex-direction: column;
         min-width: 0;
         min-height: 0;
+      }
+
+      /* Per-pane loading overlay: covers the content area (below the 35px bar). */
+      .loading-overlay {
+        position: absolute;
+        inset: 35px 0 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+        padding: 0 16px;
+        z-index: 5;
+      }
+      .pane.sidebar .loading-overlay {
+        background: var(--sidebar-bg);
+      }
+      .loading-overlay[hidden] {
+        display: none;
+      }
+      .loading-overlay .spinner {
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+      /* Error state: stop the spinner, tint the message. */
+      .loading-overlay[data-error] .spinner {
+        animation: none;
+        border-top-color: var(--border);
+      }
+      .loading-overlay[data-error] .loading-label {
+        color: #e5534b;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .loading-overlay .spinner {
+          animation-duration: 2s;
+        }
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
 
       .pane > .bar {
@@ -352,14 +402,26 @@
           </span>
         </div>
         <div id="tree"></div>
+        <div class="loading-overlay" id="treeLoading">
+          <span class="spinner"></span>
+          <span class="loading-label">Loading files…</span>
+        </div>
       </div>
       <div class="pane editor">
         <div class="bar"><span id="filename"></span></div>
         <div id="editor"></div>
+        <div class="loading-overlay" id="editorLoading">
+          <span class="spinner"></span>
+          <span class="loading-label">Loading editor…</span>
+        </div>
       </div>
       <div class="pane">
         <div class="bar">preview</div>
         <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+        <div class="loading-overlay" id="previewLoading">
+          <span class="spinner"></span>
+          <span class="loading-label" id="previewLabel">Starting…</span>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

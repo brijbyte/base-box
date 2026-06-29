@@ -346,6 +346,22 @@ import.meta.hot.accept(() => {});`;
   await expect(page.locator('#status')).toContainText('hot-updated');
 });
 
+test('pane loading overlays clear once each pane is ready', async ({
+  page,
+}) => {
+  await page.goto(`/?files=${await encodeFiles(COUNTER)}`);
+
+  // Tree + editor render from the decoded FS without waiting on the SW.
+  await expect(page.locator('#treeLoading')).toBeHidden({ timeout: 10000 });
+  await expect(page.locator('#editorLoading')).toBeHidden({ timeout: 10000 });
+
+  // Preview overlay clears only after the app actually renders (iframe `load`).
+  await expect(page.frameLocator('#preview').locator('h1')).toBeVisible({
+    timeout: 20000,
+  });
+  await expect(page.locator('#previewLoading')).toBeHidden({ timeout: 20000 });
+});
+
 test('live edit updates the preview', async ({ page }) => {
   await page.goto(`/?files=${await encodeFiles(COUNTER)}`);
   await expect(page.locator('#status')).toContainText('synced', {
