@@ -11,7 +11,7 @@ import {
 } from './preview';
 import { initTheme, cycleTheme, type Theme } from './theme';
 import { onPreviewError } from './messages';
-import { createEditor } from './editor';
+import { createEditor, type EditorStatus } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
 import type { LspClient } from './lsp/bridge'; // type-only: no runtime import
 
@@ -75,6 +75,10 @@ const els = {
   errorTitle: document.querySelector<HTMLSpanElement>('#errorTitle')!,
   errorMessage: document.querySelector<HTMLPreElement>('#errorMessage')!,
   errorDismiss: document.querySelector<HTMLButtonElement>('#errorDismiss')!,
+  diagnostics: document.querySelector<HTMLSpanElement>('#diagnostics')!,
+  cursorPos: document.querySelector<HTMLSpanElement>('#cursorPos')!,
+  indent: document.querySelector<HTMLSpanElement>('#indent')!,
+  language: document.querySelector<HTMLSpanElement>('#language')!,
 };
 
 let current = '';
@@ -100,8 +104,24 @@ const editor = createEditor(
       const lsp = lspFor(path);
       return lsp ? lsp.ensure().then((c) => c.support(path)) : [];
     },
+    onStatus: renderStatus,
   }
 );
+
+// Reflect the editor's live state into the status bar's right-hand info group.
+function renderStatus(s: EditorStatus) {
+  const sel = s.selected ? ` (${s.selected} selected)` : '';
+  els.cursorPos.textContent = `Ln ${s.line}, Col ${s.col}${sel}`;
+  els.indent.textContent = s.indent;
+  els.language.textContent = s.language;
+  if (s.errors || s.warnings) {
+    els.diagnostics.textContent = `✖ ${s.errors}  ⚠ ${s.warnings}`;
+    els.diagnostics.toggleAttribute('data-errors', s.errors > 0);
+  } else {
+    els.diagnostics.textContent = '✓ 0';
+    els.diagnostics.removeAttribute('data-errors');
+  }
+}
 
 // Try to hot-swap the changed module; fall back to a full reload when the SW says so.
 async function hotUpdate(path: string, content: string) {
@@ -189,6 +209,15 @@ function openFile(path: string) {
   current = path;
   els.filename.textContent = path || '(no file)';
   editor.setFile(path, fs.read(path) ?? '');
+  syncUrlFile(path);
+}
+
+/** Persist the open file in the URL (?file=) so a refresh re-selects it. */
+function syncUrlFile(path: string) {
+  const url = new URL(location.href);
+  if (path) url.searchParams.set('file', path);
+  else url.searchParams.delete('file');
+  history.replaceState(null, '', url);
 }
 
 async function rebuild() {
@@ -264,7 +293,10 @@ els.theme.addEventListener('click', () => {
 });
 
 els.share.addEventListener('click', async () => {
-  const url = `${location.origin}${location.pathname}?files=${await encodeFiles(fs.toJSON())}`;
+  const u = new URL(`${location.origin}${location.pathname}`);
+  u.searchParams.set('files', await encodeFiles(fs.toJSON()));
+  if (current) u.searchParams.set('file', current);
+  const url = u.toString();
   await navigator.clipboard?.writeText(url).catch(() => {});
   history.replaceState(null, '', url);
   setStatus('share URL copied');
@@ -273,7 +305,14 @@ els.share.addEventListener('click', async () => {
 async function boot() {
   // Chrome renders immediately from the already-decoded FS — only the preview waits on
   // the service worker + esbuild-wasm, so reveal the tree/editor first.
-  const initial = fs.has('index.html') ? 'index.html' : firstFile();
+  // Prefer the file named in the URL (?file=) so a refresh re-selects it.
+  const fromUrl = new URLSearchParams(location.search).get('file');
+  const initial =
+    fromUrl && fs.has(fromUrl)
+      ? fromUrl
+      : fs.has('index.html')
+        ? 'index.html'
+        : firstFile();
   panel = createFileTree(els.tree, fs.list(), initial, {
     onOpen: openFile,
     onAdd,

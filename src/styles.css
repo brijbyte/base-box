@@ -1,0 +1,581 @@
+/*
+  Single source of truth: one VS Code palette per mode. These custom
+  properties drive the app chrome, the CodeMirror theme (--cm- and --tok-
+  vars, see editor-theme.ts) and the file tree (--trees- override vars,
+  which cascade into its shadow root). Flip `data-theme` to re-theme all.
+  VS Code "Light Modern" / "Dark Modern" + classic Light+/Dark+ tokens.
+*/
+/* Light = the default. The dark rules below are guarded with
+   :not([data-theme='light']) so an explicit light choice always wins. */
+:root {
+  color-scheme: light;
+  /* chrome */
+  --bg: #ffffff;
+  --fg: #3b3b3b;
+  --header-bg: #f8f8f8;
+  --header-fg: #3b3b3b;
+  --bar-bg: #f8f8f8;
+  --border: #e5e5e5;
+  --muted: #6e7681;
+  --control-bg: #ffffff;
+  --control-fg: #3b3b3b;
+  --accent: #005fb8;
+  --sidebar-bg: #f8f8f8;
+  --selected-bg: #e4e6f1;
+  --hover-bg: #f0f0f0;
+  --skeleton-sheen: rgba(255, 255, 255, 0.65);
+  /* editor */
+  --cm-bg: #ffffff;
+  --cm-fg: #3b3b3b;
+  --cm-cursor: #005fb8;
+  --cm-selection: #add6ff;
+  /* Translucent so it doesn't paint over the selection layer (opaque hides it). */
+  --cm-active-line: rgba(0, 0, 0, 0.05);
+  --cm-gutter-fg: #6e7681;
+  /* syntax tokens (Light+) */
+  --tok-comment: #008000;
+  --tok-keyword: #0000ff;
+  --tok-string: #a31515;
+  --tok-number: #098658;
+  --tok-function: #795e26;
+  --tok-type: #267f99;
+  --tok-variable: #001080;
+  --tok-operator: #3b3b3b;
+}
+
+/* Dark — applied via system preference and via explicit override. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #1f1f1f;
+    --fg: #cccccc;
+    --header-bg: #181818;
+    --header-fg: #cccccc;
+    --bar-bg: #181818;
+    --border: #2b2b2b;
+    --muted: #9d9d9d;
+    --control-bg: #313131;
+    --control-fg: #cccccc;
+    --accent: #0078d4;
+    --sidebar-bg: #181818;
+    --selected-bg: #37373d;
+    --hover-bg: #2a2d2e;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #1f1f1f;
+    --cm-fg: #d4d4d4;
+    --cm-cursor: #aeafad;
+    --cm-selection: #2f5e9e;
+    --cm-active-line: rgba(255, 255, 255, 0.06);
+    --cm-gutter-fg: #6e7681;
+    --tok-comment: #6a9955;
+    --tok-keyword: #569cd6;
+    --tok-string: #ce9178;
+    --tok-number: #b5cea8;
+    --tok-function: #dcdcaa;
+    --tok-type: #4ec9b0;
+    --tok-variable: #9cdcfe;
+    --tok-operator: #d4d4d4;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1f1f1f;
+  --fg: #cccccc;
+  --header-bg: #181818;
+  --header-fg: #cccccc;
+  --bar-bg: #181818;
+  --border: #2b2b2b;
+  --muted: #9d9d9d;
+  --control-bg: #313131;
+  --control-fg: #cccccc;
+  --accent: #0078d4;
+  --sidebar-bg: #181818;
+  --selected-bg: #37373d;
+  --hover-bg: #2a2d2e;
+  --cm-bg: #1f1f1f;
+  --cm-fg: #d4d4d4;
+  --cm-cursor: #aeafad;
+  --cm-selection: #2f5e9e;
+  --cm-active-line: rgba(255, 255, 255, 0.06);
+  --cm-gutter-fg: #6e7681;
+  --tok-comment: #6a9955;
+  --tok-keyword: #569cd6;
+  --tok-string: #ce9178;
+  --tok-number: #b5cea8;
+  --tok-function: #dcdcaa;
+  --tok-type: #4ec9b0;
+  --tok-variable: #9cdcfe;
+  --tok-operator: #d4d4d4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font:
+    14px/1.4 ui-monospace,
+    monospace;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 220px 1fr 1fr;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+}
+
+header {
+  grid-column: 1 / 4;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--header-bg);
+  color: var(--header-fg);
+  border-bottom: 1px solid var(--border);
+}
+
+header strong {
+  font-size: 16px;
+  color: var(--accent);
+}
+
+/* Bottom status bar: spans all columns, fixed height. Message on the left,
+   editor info (cursor / indent / language / diagnostics) on the right. */
+#statusbar {
+  grid-column: 1 / 4;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 10px;
+  background: var(--accent);
+  color: #ffffff;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  user-select: none;
+  overflow: hidden;
+}
+
+#status {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: none;
+}
+
+.status-info span {
+  white-space: nowrap;
+}
+
+.status-info span:empty {
+  display: none;
+}
+
+#diagnostics[data-errors] {
+  font-weight: 700;
+}
+
+.pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Per-pane loading overlay: covers the content area (below the 35px bar).
+   Each pane shows a skeleton shaped like its eventual content. */
+.loading-overlay {
+  position: absolute;
+  inset: 35px 0 0 0;
+  background: var(--bg);
+  overflow: hidden;
+  z-index: 5;
+}
+
+.pane.sidebar .loading-overlay {
+  background: var(--sidebar-bg);
+}
+
+.loading-overlay[hidden] {
+  display: none;
+}
+
+/* Shimmer skeleton block: a muted bar with a sheen sweeping across it. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-sheen),
+    transparent
+  );
+  animation: shimmer 1.3s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation-duration: 3s;
+  }
+}
+
+/* Tree skeleton: indented file rows (icon + label). */
+.sk-tree {
+  padding: 4px 0;
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+}
+
+.sk-row.indent {
+  padding-left: 22px;
+}
+
+.sk-ico {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.sk-bar {
+  height: 9px;
+}
+
+/* Editor skeleton: gutter number + code line. */
+.sk-editor {
+  padding: 8px 0;
+}
+
+.sk-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 19.5px;
+  padding: 0 10px 0 8px;
+}
+
+.sk-num {
+  width: 13px;
+  height: 9px;
+  flex: none;
+  opacity: 0.55;
+}
+
+.sk-code {
+  height: 9px;
+}
+
+/* Preview skeleton: a page-shaped block + a status/error label below. */
+.sk-preview {
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-preview-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.sk-preview-body .skeleton {
+  height: 12px;
+}
+
+.sk-preview-body .sk-title {
+  height: 26px;
+  margin-bottom: 6px;
+}
+
+.sk-preview .loading-label {
+  padding: 8px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Error: drop the skeleton, center the (red) message over the pane. */
+.loading-overlay[data-error] .sk-preview-body {
+  display: none;
+}
+
+.loading-overlay[data-error] .loading-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #e5534b;
+}
+
+/* Preview error overlay: covers the preview content on compile/runtime errors.
+   Above the loading overlay (z 5) so it wins if both are momentarily shown. */
+.error-overlay {
+  position: absolute;
+  inset: 35px 0 0 0;
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg);
+  z-index: 6;
+}
+
+.error-overlay[hidden] {
+  display: none;
+}
+
+.error-card {
+  border: 1px solid #e5534b;
+  border-radius: 6px;
+  background: var(--control-bg);
+  overflow: hidden;
+}
+
+.error-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(229, 83, 75, 0.12);
+  border-bottom: 1px solid #e5534b;
+  color: #e5534b;
+  font-weight: 700;
+}
+
+.error-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.error-dismiss {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.error-dismiss:hover {
+  border-color: transparent;
+}
+
+.error-message {
+  margin: 0;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--fg);
+  font:
+    12px/1.5 ui-monospace,
+    monospace;
+}
+
+.pane > .bar {
+  height: 35px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  background: var(--bar-bg);
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pane.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--sidebar-bg);
+}
+
+/* VS Code-style explorer header: uppercase title + chevron, hover-revealed icons. */
+.tree-header {
+  justify-content: space-between;
+  padding: 0 6px 0 8px;
+}
+
+.tree-title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg);
+  user-select: none;
+  overflow: hidden;
+}
+
+.tree-title .chevron {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--muted);
+}
+
+.tree-actions {
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.pane.sidebar:hover .tree-actions,
+.pane.sidebar:focus-within .tree-actions {
+  opacity: 1;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--hover-bg);
+  border-color: transparent;
+}
+
+.icon-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.icon-btn svg,
+.tree-title .chevron {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+#tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  /* VS Code-minimal file tree: full-bleed rows, no inset, square, compact.
+     These cascade through @pierre/trees' shadow root. */
+  --trees-bg-override: var(--sidebar-bg);
+  --trees-fg-override: var(--fg);
+  --trees-fg-muted-override: var(--muted);
+  --trees-accent-override: var(--accent);
+  --trees-border-color-override: var(--border);
+  --trees-selected-bg-override: var(--selected-bg);
+  --trees-selected-fg-override: var(--fg);
+  --trees-selected-focused-border-color-override: var(--accent);
+  --trees-focus-ring-color-override: var(--accent);
+  --trees-focus-ring-width-override: 1px;
+  --trees-focus-ring-offset-override: -1px;
+  --trees-theme-list-hover-bg: var(--hover-bg);
+  --trees-item-height: 22px;
+  --trees-border-radius-override: 0px;
+  --trees-item-margin-x-override: 0px;
+  --trees-padding-inline-override: 0px;
+}
+
+#filename {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#editor .cm-editor {
+  height: 100%;
+}
+
+#editor .cm-scroller {
+  font:
+    13px/1.5 ui-monospace,
+    monospace;
+}
+
+#preview {
+  flex: 1;
+  border: 0;
+  background: #fff;
+}
+
+.pane.editor {
+  border-right: 1px solid var(--border);
+}
+
+button,
+select {
+  font: inherit;
+  background: var(--control-bg);
+  color: var(--control-fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
