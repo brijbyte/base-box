@@ -44,16 +44,17 @@
 }
 
 /* Theming = MODE (data-theme: light | dark | unset=system) × DARK COLOR THEME
-   (data-dark-theme: default | dimmed). A dark color theme only takes effect when the
-   effective mode is dark — i.e. explicit [data-theme='dark'] OR system + OS-dark
-   (:not([data-theme='light']) under prefers-color-scheme: dark). Light is the bare :root
-   default; dark palettes are gated on the data-dark-theme selector so adding a new dark
-   color theme is just another gated block (and a light theme would mirror this on :root). */
+   (data-dark-theme: default | dimmed). The bundled light (:root) and dark (below) palettes
+   are the always-applied BASE layers for each appearance — so first paint is never the wrong
+   appearance, even before a lazily-loaded color theme arrives. A non-default color theme
+   (e.g. Dark Dimmed, in src/themes/) is an OVERRIDE layer: its selector carries an extra
+   [data-dark-theme='…'] attribute, giving it higher specificity so it wins over this base
+   whenever it's selected + loaded. This is why default themes must stay bundled. */
 
-/* Dark — DEFAULT color theme (VS Code Dark+). Active under system-dark and explicit dark,
-   unless a non-default dark color theme is selected. */
+/* Dark — DEFAULT/base palette (VS Code Dark+). Always active under system-dark and explicit
+   dark; a selected non-default dark theme overrides it with higher specificity. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']):not([data-dark-theme='dimmed']) {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
     --bg: #1f1f1f;
     --fg: #cccccc;
@@ -86,7 +87,7 @@
   }
 }
 
-:root[data-theme='dark']:not([data-dark-theme='dimmed']) {
+:root[data-theme='dark'] {
   color-scheme: dark;
   --bg: #1f1f1f;
   --fg: #cccccc;
