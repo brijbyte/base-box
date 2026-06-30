@@ -43,9 +43,17 @@
   --tok-operator: #3b3b3b;
 }
 
-/* Dark — applied via system preference and via explicit override. */
+/* Theming = MODE (data-theme: light | dark | unset=system) × DARK COLOR THEME
+   (data-dark-theme: default | dimmed). A dark color theme only takes effect when the
+   effective mode is dark — i.e. explicit [data-theme='dark'] OR system + OS-dark
+   (:not([data-theme='light']) under prefers-color-scheme: dark). Light is the bare :root
+   default; dark palettes are gated on the data-dark-theme selector so adding a new dark
+   color theme is just another gated block (and a light theme would mirror this on :root). */
+
+/* Dark — DEFAULT color theme (VS Code Dark+). Active under system-dark and explicit dark,
+   unless a non-default dark color theme is selected. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme='light']):not([data-dark-theme='dimmed']) {
     color-scheme: dark;
     --bg: #1f1f1f;
     --fg: #cccccc;
@@ -78,7 +86,7 @@
   }
 }
 
-:root[data-theme='dark'] {
+:root[data-theme='dark']:not([data-dark-theme='dimmed']) {
   color-scheme: dark;
   --bg: #1f1f1f;
   --fg: #cccccc;
@@ -93,6 +101,7 @@
   --sidebar-bg: #181818;
   --selected-bg: #37373d;
   --hover-bg: #2a2d2e;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
   --cm-bg: #1f1f1f;
   --cm-fg: #d4d4d4;
   --cm-cursor: #aeafad;
@@ -109,9 +118,44 @@
   --tok-operator: #d4d4d4;
 }
 
-/* GitHub Dark Dimmed — extracted from primer/github-vscode-theme (@primer/primitives
-   dark_dimmed). Chrome from canvas/fg/border/accent; tokens from the scale dark shades. */
-:root[data-theme='dark-dimmed'] {
+/* Dark — "GitHub Dark Dimmed" color theme. Extracted from primer/github-vscode-theme
+   (@primer/primitives dark_dimmed): chrome from canvas/fg/border/accent, tokens from the
+   scale dark shades. Active under system-dark and explicit dark when selected. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='dimmed'] {
+    color-scheme: dark;
+    --bg: #22272e;
+    --fg: #adbac7;
+    --header-bg: #1c2128;
+    --header-fg: #adbac7;
+    --bar-bg: #1c2128;
+    --border: #444c56;
+    --muted: #768390;
+    --control-bg: #2d333b;
+    --control-fg: #adbac7;
+    --accent: #539bf5;
+    --sidebar-bg: #1c2128;
+    --selected-bg: #373e47;
+    --hover-bg: #2d333b;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #22272e;
+    --cm-fg: #adbac7;
+    --cm-cursor: #adbac7;
+    --cm-selection: rgba(65, 132, 228, 0.4);
+    --cm-active-line: rgba(99, 110, 123, 0.1);
+    --cm-gutter-fg: #636e7b;
+    --tok-comment: #768390;
+    --tok-keyword: #f47067;
+    --tok-string: #96d0ff;
+    --tok-number: #6cb6ff;
+    --tok-function: #dcbdfb;
+    --tok-type: #f69d50;
+    --tok-variable: #adbac7;
+    --tok-operator: #adbac7;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='dimmed'] {
   color-scheme: dark;
   --bg: #22272e;
   --fg: #adbac7;
@@ -209,6 +253,21 @@ header strong {
 .settings-panel button {
   text-align: left;
   white-space: nowrap;
+}
+
+/* A labeled control row inside the popover (e.g. "Mode  [select]"). */
+.settings-panel .setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--header-fg);
+  cursor: pointer;
+}
+
+.settings-panel .setting-row select {
+  flex: none;
 }
 
 /* Bottom status bar: spans all columns, fixed height. Message on the left,
@@ -647,4 +706,9 @@ button:hover {
 button:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 1px;
+}
+
+select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

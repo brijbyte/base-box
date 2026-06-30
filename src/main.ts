@@ -9,7 +9,13 @@ import {
   refreshPreview,
   onControllerChange,
 } from './preview';
-import { initTheme, cycleTheme, themeLabel, type Theme } from './theme';
+import {
+  initTheme,
+  setMode,
+  setDarkTheme,
+  type Mode,
+  type DarkTheme,
+} from './theme';
 import { downloadZip } from './zip';
 import { onPreviewError } from './messages';
 import { createEditor, type EditorStatus } from './editor';
@@ -64,7 +70,8 @@ const els = {
   status: document.querySelector<HTMLSpanElement>('#status')!,
   share: document.querySelector<HTMLButtonElement>('#share')!,
   download: document.querySelector<HTMLButtonElement>('#download')!,
-  theme: document.querySelector<HTMLButtonElement>('#theme')!,
+  mode: document.querySelector<HTMLSelectElement>('#mode')!,
+  darkTheme: document.querySelector<HTMLSelectElement>('#darkTheme')!,
   settings: document.querySelector<HTMLButtonElement>('#settings')!,
   settingsPanel: document.querySelector<HTMLDivElement>('#settingsPanel')!,
   filename: document.querySelector<HTMLDivElement>('#filename')!,
@@ -86,7 +93,6 @@ const els = {
 };
 
 let current = '';
-let theme: Theme = initTheme();
 let panel: FileTreePanel;
 
 const firstFile = () => fs.list()[0] ?? '';
@@ -304,13 +310,23 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- Theme ---
-// Styling is CSS-variable driven: cycleTheme() flips `data-theme` on <html> and the
-// editor (var-based CM theme), tree (cascading --trees-* overrides) and chrome follow.
-els.theme.textContent = themeLabel(theme);
-els.theme.addEventListener('click', () => {
-  theme = cycleTheme();
-  els.theme.textContent = themeLabel(theme);
+// Two axes (see theme.ts): MODE (light/dark/system) and the dark COLOR theme. Both flip
+// data-* attrs on <html>; the var-based CM theme, tree (--trees-* overrides) and chrome
+// all follow with no reconfigure. The dark color theme only shows when the mode is dark.
+const initialTheme = initTheme();
+els.mode.value = initialTheme.mode;
+els.darkTheme.value = initialTheme.darkTheme;
+// The dark color theme can't apply in light mode, so disable it there for clarity.
+const syncDarkThemeEnabled = () =>
+  (els.darkTheme.disabled = els.mode.value === 'light');
+syncDarkThemeEnabled();
+els.mode.addEventListener('change', () => {
+  setMode(els.mode.value as Mode);
+  syncDarkThemeEnabled();
 });
+els.darkTheme.addEventListener('change', () =>
+  setDarkTheme(els.darkTheme.value as DarkTheme)
+);
 
 els.share.addEventListener('click', async () => {
   const u = new URL(`${location.origin}${location.pathname}`);

@@ -10,8 +10,11 @@
   <script>
     try {
       var t = localStorage.getItem('base-box-theme');
-      if (t === 'light' || t === 'dark' || t === 'dark-dimmed')
+      if (t === 'light' || t === 'dark')
         document.documentElement.setAttribute('data-theme', t);
+      var d = localStorage.getItem('base-box-dark-theme');
+      if (d === 'dimmed')
+        document.documentElement.setAttribute('data-dark-theme', d);
     } catch (e) { }
   </script>
   <link rel="stylesheet" href="/src/styles.css" />
@@ -32,7 +35,21 @@
         </button>
         <div id="settingsPanel" class="settings-panel" hidden>
           <button id="share">Share URL</button>
-          <button id="theme" title="Toggle color theme">Theme: System</button>
+          <label class="setting-row">
+            <span>Mode</span>
+            <select id="mode" title="Light / dark mode">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <label class="setting-row">
+            <span>Dark theme</span>
+            <select id="darkTheme" title="Color theme used in dark mode">
+              <option value="default">Default</option>
+              <option value="dimmed">Dark Dimmed</option>
+            </select>
+          </label>
         </div>
       </div>
     </header>

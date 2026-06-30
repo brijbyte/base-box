@@ -1,47 +1,59 @@
-export type Theme = 'system' | 'light' | 'dark' | 'dark-dimmed';
+// Theming has two orthogonal axes:
+//  - MODE: 'system' | 'light' | 'dark'  (does the UI render light or dark?)
+//  - COLOR THEME: a palette variant within a mode. Dark currently has 'default' | 'dimmed';
+//    a dark color theme only applies when the effective mode is dark (explicit dark, or
+//    system + OS-dark). Light has only 'default' for now but mirrors the same shape.
+export type Mode = 'system' | 'light' | 'dark';
+export type DarkTheme = 'default' | 'dimmed';
 
-const KEY = 'base-box-theme';
-const ORDER: Theme[] = ['system', 'light', 'dark', 'dark-dimmed'];
+const MODE_KEY = 'base-box-theme';
+const DARK_KEY = 'base-box-dark-theme';
 
-/** Non-default themes set `data-theme` to this exact value; `system` clears it. */
-export const OVERRIDE_THEMES: Theme[] = ['light', 'dark', 'dark-dimmed'];
+const MODES: Mode[] = ['system', 'light', 'dark'];
+const DARK_THEMES: DarkTheme[] = ['default', 'dimmed'];
 
-const LABELS: Record<Theme, string> = {
+export const MODE_LABELS: Record<Mode, string> = {
   system: 'System',
   light: 'Light',
   dark: 'Dark',
-  'dark-dimmed': 'Dark Dimmed',
+};
+export const DARK_THEME_LABELS: Record<DarkTheme, string> = {
+  default: 'Default',
+  dimmed: 'Dark Dimmed',
 };
 
-export const themeLabel = (t: Theme) => `Theme: ${LABELS[t]}`;
-
-export function getTheme(): Theme {
-  const t = localStorage.getItem(KEY) as Theme | null;
-  return t && OVERRIDE_THEMES.includes(t) ? t : 'system';
+export function getMode(): Mode {
+  const m = localStorage.getItem(MODE_KEY) as Mode | null;
+  return m && MODES.includes(m) ? m : 'system';
 }
 
-/** Apply a theme: 'system' clears the override so CSS `prefers-color-scheme` wins. */
-export function applyTheme(theme: Theme): void {
+export function getDarkTheme(): DarkTheme {
+  const d = localStorage.getItem(DARK_KEY) as DarkTheme | null;
+  return d && DARK_THEMES.includes(d) ? d : 'default';
+}
+
+/** Reflect both axes onto <html>: data-theme (mode; 'system' clears it) + data-dark-theme. */
+export function applyTheme(mode = getMode(), darkTheme = getDarkTheme()): void {
   const root = document.documentElement;
-  if (theme === 'system') root.removeAttribute('data-theme');
-  else root.setAttribute('data-theme', theme);
+  if (mode === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', mode);
+  root.setAttribute('data-dark-theme', darkTheme);
 }
 
-export function setTheme(theme: Theme): void {
-  localStorage.setItem(KEY, theme);
-  applyTheme(theme);
+export function setMode(mode: Mode): void {
+  localStorage.setItem(MODE_KEY, mode);
+  applyTheme(mode, getDarkTheme());
 }
 
-/** Cycle System → Light → Dark → Dark Dimmed → System and persist. Returns the new theme. */
-export function cycleTheme(): Theme {
-  const next = ORDER[(ORDER.indexOf(getTheme()) + 1) % ORDER.length];
-  setTheme(next);
-  return next;
+export function setDarkTheme(darkTheme: DarkTheme): void {
+  localStorage.setItem(DARK_KEY, darkTheme);
+  applyTheme(getMode(), darkTheme);
 }
 
-/** Initialize from storage and return the active theme. */
-export function initTheme(): Theme {
-  const t = getTheme();
-  applyTheme(t);
-  return t;
+/** Initialize from storage and return the active mode + dark color theme. */
+export function initTheme(): { mode: Mode; darkTheme: DarkTheme } {
+  const mode = getMode();
+  const darkTheme = getDarkTheme();
+  applyTheme(mode, darkTheme);
+  return { mode, darkTheme };
 }
