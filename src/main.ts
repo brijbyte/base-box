@@ -10,6 +10,7 @@ import {
   onControllerChange,
 } from './preview';
 import { initTheme, cycleTheme, type Theme } from './theme';
+import { downloadZip } from './zip';
 import { onPreviewError } from './messages';
 import { createEditor, type EditorStatus } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
@@ -62,6 +63,7 @@ const els = {
   iframe: document.querySelector<HTMLIFrameElement>('#preview')!,
   status: document.querySelector<HTMLSpanElement>('#status')!,
   share: document.querySelector<HTMLButtonElement>('#share')!,
+  download: document.querySelector<HTMLButtonElement>('#download')!,
   theme: document.querySelector<HTMLButtonElement>('#theme')!,
   settings: document.querySelector<HTMLButtonElement>('#settings')!,
   settingsPanel: document.querySelector<HTMLDivElement>('#settingsPanel')!,
@@ -319,6 +321,12 @@ els.share.addEventListener('click', async () => {
   await navigator.clipboard?.writeText(url).catch(() => {});
   history.replaceState(null, '', url);
   setStatus('share URL copied');
+  setSettingsOpen(false);
+});
+
+els.download.addEventListener('click', () => {
+  downloadZip('base-box', fs.toJSON());
+  setStatus('downloaded base-box.zip');
   setSettingsOpen(false);
 });
 
