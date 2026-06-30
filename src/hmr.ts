@@ -92,6 +92,53 @@ export const ERROR_RELAY_JS = `(function(){
 })();`;
 
 /**
+ * Classic script injected into the preview <head> (before the app's modules) that patches
+ * `console.*` to forward each call to the host's console panel while still logging natively.
+ * Args are serialized here — the iframe holds the live objects — and posted as a string.
+ * Uncaught errors / rejections are mirrored as `error` entries too, matching devtools.
+ */
+export const CONSOLE_CAPTURE_JS = `(function(){
+  var SRC = ${JSON.stringify(PREVIEW_MSG)};
+  var host = window.parent || window;
+  function fmt(a){
+    if (typeof a === 'string') return a;
+    if (a instanceof Error) return a.stack || (a.name + ': ' + a.message);
+    if (typeof a === 'function') return '[Function ' + (a.name || 'anonymous') + ']';
+    if (typeof a === 'undefined') return 'undefined';
+    if (typeof a === 'bigint') return a.toString() + 'n';
+    try {
+      var seen = new WeakSet();
+      var out = JSON.stringify(a, function(k, v){
+        if (typeof v === 'bigint') return v.toString() + 'n';
+        if (typeof v === 'function') return '[Function ' + (v.name || 'anonymous') + ']';
+        if (typeof v === 'object' && v !== null){ if (seen.has(v)) return '[Circular]'; seen.add(v); }
+        return v;
+      }, 2);
+      return out === undefined ? String(a) : out;
+    } catch(e){ try { return String(a); } catch(_){ return '[Unserializable]'; } }
+  }
+  function send(level, args){
+    var text;
+    try { text = Array.prototype.map.call(args, fmt).join(' '); }
+    catch(e){ text = '[console serialization failed]'; }
+    try { host.postMessage({ source: SRC, type: 'console', level: level, text: text }, '*'); } catch(e){}
+  }
+  ['log','info','warn','error','debug'].forEach(function(level){
+    var orig = console[level];
+    console[level] = function(){ send(level, arguments); if (orig) return orig.apply(console, arguments); };
+  });
+  window.addEventListener('error', function(e){
+    var m = (e.error && (e.error.stack || e.error.message)) || e.message || String(e);
+    if (typeof m === 'string' && m.indexOf('[base-box]') === 0) return; // compile stub already reported
+    send('error', [m]);
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    var r = e.reason;
+    send('error', ['Uncaught (in promise) ' + ((r && (r.stack || r.message)) || String(r))]);
+  });
+})();`;
+
+/**
  * A stand-in module returned when esbuild/lightningcss fail to transform a file: it posts
  * the compile error to the host (overlay) then throws to halt. The thrown message starts
  * with `[base-box]` so the runtime error handler ignores it (no double report). The SW also
@@ -146,6 +193,16 @@ export function createHotContext(id) {
 }
 
 async function apply(b) {
+  // CSS pulled in via <link rel=stylesheet>: swap the link's href in place (it already
+  // carries a ?t cache-buster) instead of re-importing the JS injector, which would add a
+  // duplicate inline <style> on top of the still-present <link>.
+  const want = new URL(b.url, location.href).pathname;
+  for (const link of document.querySelectorAll('link[rel="stylesheet"]')) {
+    if (new URL(link.href, location.href).pathname === want) {
+      link.href = new URL(b.url, location.href).href;
+      return;
+    }
+  }
   const mod = registry.get(b.path);
   const cb = mod && mod.cb;          // the OLD module's accept callback
   const dispose = mod && mod.dispose;

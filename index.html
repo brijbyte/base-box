@@ -23,34 +23,6 @@
 
 <body>
   <div id="app">
-    <header>
-      <strong>Base Box</strong>
-      <div class="settings">
-        <button id="settings" class="icon-btn" title="Settings" aria-label="Settings" aria-haspopup="true"
-          aria-expanded="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </button>
-        <div id="settingsPanel" class="settings-panel" hidden>
-          <button id="share">Share URL</button>
-          <label class="setting-row">
-            <span>Mode</span>
-            <select id="mode" title="Light / dark mode">
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </label>
-          <label class="setting-row">
-            <span>Color theme</span>
-            <select id="colorTheme" title="Color theme for the current appearance"></select>
-          </label>
-        </div>
-      </div>
-    </header>
     <div class="pane sidebar tree-loading">
       <div class="bar tree-header">
         <span class="tree-title">
@@ -144,26 +116,54 @@
     </div>
     <div class="pane">
       <div class="bar">preview</div>
-      <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
-      <div class="loading-overlay sk-preview" id="previewLoading">
-        <div class="sk-preview-body" aria-hidden="true">
-          <span class="skeleton sk-title" style="width: 45%"></span>
-          <span class="skeleton" style="width: 92%"></span>
-          <span class="skeleton" style="width: 80%"></span>
-          <span class="skeleton" style="width: 88%"></span>
-          <span class="skeleton" style="width: 70%"></span>
-          <span class="skeleton" style="width: 40%; height: 34px; margin-top: 8px"></span>
-        </div>
-        <span class="loading-label" id="previewLabel">Starting…</span>
-      </div>
-      <div class="error-overlay" id="previewError" hidden>
-        <div class="error-card">
-          <div class="error-head">
-            <span class="error-title" id="errorTitle"></span>
-            <button class="error-dismiss" id="errorDismiss" title="Dismiss" aria-label="Dismiss error">×</button>
+      <div class="preview-body">
+        <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
+        <div class="loading-overlay sk-preview" id="previewLoading">
+          <div class="sk-preview-body" aria-hidden="true">
+            <span class="skeleton sk-title" style="width: 45%"></span>
+            <span class="skeleton" style="width: 92%"></span>
+            <span class="skeleton" style="width: 80%"></span>
+            <span class="skeleton" style="width: 88%"></span>
+            <span class="skeleton" style="width: 70%"></span>
+            <span class="skeleton" style="width: 40%; height: 34px; margin-top: 8px"></span>
           </div>
-          <pre class="error-message" id="errorMessage"></pre>
+          <span class="loading-label" id="previewLabel">Starting…</span>
         </div>
+        <div class="error-overlay" id="previewError" hidden>
+          <div class="error-card">
+            <div class="error-head">
+              <span class="error-title" id="errorTitle"></span>
+              <button class="error-dismiss" id="errorDismiss" title="Dismiss" aria-label="Dismiss error">×</button>
+            </div>
+            <pre class="error-message" id="errorMessage"></pre>
+          </div>
+        </div>
+      </div>
+      <div class="console" id="console">
+        <div class="bar console-bar">
+          <button class="console-toggle" id="consoleToggle" title="Toggle console" aria-expanded="true">
+            <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+            <span class="console-title">Console</span>
+          </button>
+          <span class="console-filters" id="consoleFilters">
+            <button class="console-filter is-active" data-level="all">All</button>
+            <button class="console-filter" data-level="error">Errors<span class="console-count" data-count="error"></span></button>
+            <button class="console-filter" data-level="warn">Warnings<span class="console-count" data-count="warn"></span></button>
+            <button class="console-filter" data-level="info">Info</button>
+            <button class="console-filter" data-level="log">Logs</button>
+            <button class="console-filter" data-level="debug">Debug</button>
+          </span>
+          <button id="consoleClear" class="icon-btn console-clear" title="Clear console" aria-label="Clear console">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6h18" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            </svg>
+          </button>
+        </div>
+        <div class="console-log" id="consoleLog" data-filter="all"></div>
       </div>
     </div>
     <footer id="statusbar">
@@ -174,6 +174,31 @@
         <span id="indent" title="Indentation"></span>
         <span id="language" title="Language mode"></span>
       </span>
+      <div class="settings">
+        <button id="settings" class="icon-btn" title="Settings" aria-label="Settings" aria-haspopup="true"
+          aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+        <div id="settingsPanel" class="settings-panel" hidden>
+          <button id="share">Share URL</button>
+          <label class="setting-row">
+            <span>Mode</span>
+            <select id="mode" title="Light / dark mode">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <label class="setting-row">
+            <span>Color theme</span>
+            <select id="colorTheme" title="Color theme for the current appearance"></select>
+          </label>
+        </div>
+      </div>
     </footer>
   </div>
   <script type="module" src="/src/main.ts"></script>

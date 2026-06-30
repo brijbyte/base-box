@@ -23,7 +23,11 @@ import {
   type Mode,
 } from './theme';
 import { downloadZip } from './zip';
-import { onPreviewError } from './messages';
+import {
+  onPreviewError,
+  onPreviewConsole,
+  type ConsoleLevel,
+} from './messages';
 import { createEditor, type EditorStatus } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
 import type { LspClient } from './lsp/bridge'; // type-only: no runtime import
@@ -92,6 +96,11 @@ const els = {
   errorTitle: document.querySelector<HTMLSpanElement>('#errorTitle')!,
   errorMessage: document.querySelector<HTMLPreElement>('#errorMessage')!,
   errorDismiss: document.querySelector<HTMLButtonElement>('#errorDismiss')!,
+  console: document.querySelector<HTMLDivElement>('#console')!,
+  consoleLog: document.querySelector<HTMLDivElement>('#consoleLog')!,
+  consoleToggle: document.querySelector<HTMLButtonElement>('#consoleToggle')!,
+  consoleClear: document.querySelector<HTMLButtonElement>('#consoleClear')!,
+  consoleFilters: document.querySelector<HTMLSpanElement>('#consoleFilters')!,
   diagnostics: document.querySelector<HTMLSpanElement>('#diagnostics')!,
   cursorPos: document.querySelector<HTMLSpanElement>('#cursorPos')!,
   indent: document.querySelector<HTMLSpanElement>('#indent')!,
@@ -186,6 +195,7 @@ function setPreviewLabel(label: string) {
 /** Show the overlay, then (re)load the iframe; the `load` handler hides it. */
 function reloadPreview(label = 'Loading preview…') {
   clearPreviewError(); // fresh load; the iframe re-posts any error that still applies
+  clearConsole(); // fresh page: drop the previous run's console output
   setPreviewLabel(label);
   previewArmed = true;
   refreshPreview(els.iframe);
@@ -219,6 +229,93 @@ onPreviewError((d) => {
     d.stack && !d.stack.includes(msg) ? `${msg}\n\n${d.stack}` : d.stack || msg;
   showPreviewError(d.kind, body, d.file);
 });
+
+// --- Console panel ---
+// Mirrors the preview iframe's console.* output (forwarded via postMessage; see hmr.ts).
+const counts: Record<ConsoleLevel, number> = {
+  log: 0,
+  info: 0,
+  warn: 0,
+  error: 0,
+  debug: 0,
+};
+let lastRow: HTMLDivElement | null = null;
+let lastKey = '';
+
+function updateConsoleCounts() {
+  for (const level of ['error', 'warn'] as const) {
+    const badge = els.consoleFilters.querySelector<HTMLSpanElement>(
+      `[data-count="${level}"]`
+    );
+    if (badge) badge.textContent = counts[level] ? String(counts[level]) : '';
+  }
+}
+
+function clearConsole() {
+  els.consoleLog.replaceChildren();
+  lastRow = null;
+  lastKey = '';
+  for (const k of Object.keys(counts) as ConsoleLevel[]) counts[k] = 0;
+  updateConsoleCounts();
+}
+
+function setConsoleCollapsed(collapsed: boolean) {
+  els.console.classList.toggle('is-collapsed', collapsed);
+  els.consoleToggle.setAttribute('aria-expanded', String(!collapsed));
+}
+
+function appendConsole(level: ConsoleLevel, text: string) {
+  counts[level]++;
+  updateConsoleCounts();
+
+  // Coalesce identical consecutive lines (devtools-style) into a repeat badge.
+  const key = `${level} ${text}`;
+  if (key === lastKey && lastRow) {
+    let badge = lastRow.querySelector<HTMLSpanElement>('.console-repeat');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'console-repeat';
+      badge.textContent = '1';
+      lastRow.prepend(badge);
+    }
+    badge.textContent = String(Number(badge.textContent) + 1);
+    return;
+  }
+
+  const atBottom =
+    els.consoleLog.scrollTop + els.consoleLog.clientHeight >=
+    els.consoleLog.scrollHeight - 4;
+  const row = document.createElement('div');
+  row.className = 'console-row';
+  row.dataset.level = level;
+  const body = document.createElement('span');
+  body.className = 'console-text';
+  body.textContent = text;
+  row.append(body);
+  els.consoleLog.append(row);
+  lastRow = row;
+  lastKey = key;
+
+  if (atBottom) els.consoleLog.scrollTop = els.consoleLog.scrollHeight;
+  if (level === 'error') setConsoleCollapsed(false); // surface errors automatically
+}
+
+els.consoleClear.addEventListener('click', clearConsole);
+els.consoleToggle.addEventListener('click', () =>
+  setConsoleCollapsed(!els.console.classList.contains('is-collapsed'))
+);
+els.consoleFilters.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(
+    '.console-filter'
+  );
+  if (!btn) return;
+  els.consoleFilters
+    .querySelectorAll('.console-filter')
+    .forEach((b) => b.classList.toggle('is-active', b === btn));
+  els.consoleLog.dataset.filter = btn.dataset.level ?? 'all';
+  setConsoleCollapsed(false);
+});
+onPreviewConsole((d) => appendConsole(d.level, d.text));
 
 function setPreviewError(msg: string) {
   previewArmed = false;

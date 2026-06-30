@@ -17,6 +17,18 @@ export interface PreviewErrorMessage {
   file?: string;
 }
 
+/** Console levels mirrored from the preview iframe to the host console panel. */
+export type ConsoleLevel = 'log' | 'info' | 'warn' | 'error' | 'debug';
+
+/** A `console.*` call (or uncaught error) the preview iframe forwards to the host. */
+export interface PreviewConsoleMessage {
+  source: typeof PREVIEW_MSG;
+  type: 'console';
+  level: ConsoleLevel;
+  /** Args pre-serialized in the iframe (it holds the live objects), space-joined. */
+  text: string;
+}
+
 /** A hot-update the SW broadcasts to preview client(s); consumed by the HMR runtime. */
 export interface HmrMessage {
   type: 'hmr';
@@ -32,6 +44,18 @@ export function onPreviewError(
     const d = e.data;
     if (d?.source === PREVIEW_MSG && d.type === 'error') {
       handler(d as PreviewErrorMessage);
+    }
+  });
+}
+
+/** Subscribe to `console.*` mirrors posted by the iframe runtime onto `window`. */
+export function onPreviewConsole(
+  handler: (msg: PreviewConsoleMessage) => void
+): void {
+  window.addEventListener('message', (e: MessageEvent) => {
+    const d = e.data;
+    if (d?.source === PREVIEW_MSG && d.type === 'console') {
+      handler(d as PreviewConsoleMessage);
     }
   });
 }

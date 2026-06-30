@@ -16,6 +16,7 @@ import {
   hmrPreamble,
   compileErrorModule,
   ERROR_RELAY_JS,
+  CONSOLE_CAPTURE_JS,
   HMR_CLIENT_JS,
   type ModuleGraph,
 } from './hmr';
@@ -204,8 +205,9 @@ function rewriteSpecifiers(fromPath: string, code: string): string {
 async function serveHtml(_path: string, html: string): Promise<Response> {
   const importMap = await buildImportMap();
   const tag = `<script type="importmap">${JSON.stringify({ imports: importMap })}</script>`;
-  // Relay runs first (classic script) so compile errors surface even if the app fails to link.
-  const head = `${tag}\n    <script>${ERROR_RELAY_JS}</script>`;
+  // Console capture + relay run first (classic scripts) so console.* is patched before the
+  // app's modules execute, and compile errors surface even if the app fails to link.
+  const head = `<script>${CONSOLE_CAPTURE_JS}</script>\n    ${tag}\n    <script>${ERROR_RELAY_JS}</script>`;
   const injected = html.includes('<head>')
     ? html.replace('<head>', `<head>\n    ${head}`)
     : head + html;
