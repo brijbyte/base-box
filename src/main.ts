@@ -90,6 +90,8 @@ const els = {
   del: document.querySelector<HTMLButtonElement>('#delete')!,
   treeLoading: document.querySelector<HTMLDivElement>('#treeLoading')!,
   editorLoading: document.querySelector<HTMLDivElement>('#editorLoading')!,
+  previewTitle: document.querySelector<HTMLSpanElement>('#previewTitle')!,
+  previewReload: document.querySelector<HTMLButtonElement>('#previewReload')!,
   previewLoading: document.querySelector<HTMLDivElement>('#previewLoading')!,
   previewLabel: document.querySelector<HTMLSpanElement>('#previewLabel')!,
   previewError: document.querySelector<HTMLDivElement>('#previewError')!,
@@ -181,10 +183,20 @@ function setStatus(msg: string) {
 // initial about:blank load that fires before we ever set a real src.
 let previewArmed = false;
 els.iframe.addEventListener('load', () => {
+  syncPreviewTitle();
   if (!previewArmed) return;
   previewArmed = false;
   els.previewLoading.hidden = true;
 });
+
+// Mirror the preview document's <title> into the pane bar; fall back to "Preview".
+function syncPreviewTitle() {
+  const title = els.iframe.contentDocument?.title?.trim();
+  els.previewTitle.textContent = title || 'Preview';
+}
+
+// Force a full reload of the preview from scratch (re-fetch + re-evaluate the app).
+els.previewReload.addEventListener('click', () => reloadPreview());
 
 function setPreviewLabel(label: string) {
   els.previewLabel.textContent = label;

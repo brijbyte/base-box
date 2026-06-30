@@ -482,6 +482,29 @@ body {
   background: var(--sidebar-bg);
 }
 
+/* Preview pane header: title left, reload button right (revealed on hover). */
+.preview-header {
+  justify-content: space-between;
+  padding: 0 6px 0 10px;
+}
+
+.preview-header #previewTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-header #previewReload {
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.pane:hover .preview-header #previewReload,
+.pane:focus-within .preview-header #previewReload {
+  opacity: 1;
+}
+
 /* VS Code-style explorer header: uppercase title + chevron, hover-revealed icons. */
 .tree-header {
   justify-content: space-between;
