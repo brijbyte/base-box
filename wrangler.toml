@@ -1,0 +1,17 @@
+# Cloudflare Workers static-assets deployment for the built `dist/` site.
+# `npm run deploy` builds then uploads; serves at base-box.brijbyte.com.
+name = "base-box"
+compatibility_date = "2026-06-30"
+
+# Assets-only Worker (no server code): Cloudflare serves files from dist/ directly.
+# `_headers` (public/_headers → dist/_headers) still applies — it sets the
+# Service-Worker-Allowed and cache-control headers the SW relies on.
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+# Bind the custom domain. Cloudflare auto-creates the DNS record + TLS cert for it,
+# provided brijbyte.com is a zone in this Cloudflare account.
+[[routes]]
+pattern = "base-box.brijbyte.com"
+custom_domain = true
