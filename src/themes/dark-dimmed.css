@@ -1,0 +1,71 @@
+/* "GitHub Dark Dimmed" color theme — loaded lazily (see theme.ts) only when selected.
+   Extracted from primer/github-vscode-theme (@primer/primitives dark_dimmed): chrome from
+   canvas/fg/border/accent, tokens from the scale dark shades. Two mutually-exclusive
+   selector pairs (system-dark + explicit-dark), gated on data-dark-theme='dimmed'. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='dimmed'] {
+    color-scheme: dark;
+    --bg: #22272e;
+    --fg: #adbac7;
+    --header-bg: #1c2128;
+    --header-fg: #adbac7;
+    --bar-bg: #1c2128;
+    --border: #444c56;
+    --muted: #768390;
+    --control-bg: #2d333b;
+    --control-fg: #adbac7;
+    --accent: #539bf5;
+    --statusbar-bg: #316dca;
+    --sidebar-bg: #1c2128;
+    --selected-bg: #373e47;
+    --hover-bg: #2d333b;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #22272e;
+    --cm-fg: #adbac7;
+    --cm-cursor: #adbac7;
+    --cm-selection: rgba(65, 132, 228, 0.4);
+    --cm-active-line: rgba(99, 110, 123, 0.1);
+    --cm-gutter-fg: #636e7b;
+    --tok-comment: #768390;
+    --tok-keyword: #f47067;
+    --tok-string: #96d0ff;
+    --tok-number: #6cb6ff;
+    --tok-function: #dcbdfb;
+    --tok-type: #f69d50;
+    --tok-variable: #adbac7;
+    --tok-operator: #adbac7;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='dimmed'] {
+  color-scheme: dark;
+  --bg: #22272e;
+  --fg: #adbac7;
+  --header-bg: #1c2128;
+  --header-fg: #adbac7;
+  --bar-bg: #1c2128;
+  --border: #444c56;
+  --muted: #768390;
+  --control-bg: #2d333b;
+  --control-fg: #adbac7;
+  --accent: #539bf5;
+  --statusbar-bg: #316dca;
+  --sidebar-bg: #1c2128;
+  --selected-bg: #373e47;
+  --hover-bg: #2d333b;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #22272e;
+  --cm-fg: #adbac7;
+  --cm-cursor: #adbac7;
+  --cm-selection: rgba(65, 132, 228, 0.4);
+  --cm-active-line: rgba(99, 110, 123, 0.1);
+  --cm-gutter-fg: #636e7b;
+  --tok-comment: #768390;
+  --tok-keyword: #f47067;
+  --tok-string: #96d0ff;
+  --tok-number: #6cb6ff;
+  --tok-function: #dcbdfb;
+  --tok-type: #f69d50;
+  --tok-variable: #adbac7;
+  --tok-operator: #adbac7;
+}

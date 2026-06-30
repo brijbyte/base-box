@@ -9,6 +9,9 @@ export type Appearance = 'light' | 'dark';
 export interface ColorTheme {
   id: string;
   label: string;
+  /** Lazily import this theme's CSS (one chunk, injected on first use). Absent for the
+   *  built-in `default` palette, which already ships in the main stylesheet. */
+  load?: () => Promise<unknown>;
 }
 
 /** Available color themes per appearance. `default` is the built-in palette (not persisted). */
@@ -16,9 +19,27 @@ export const THEMES: Record<Appearance, ColorTheme[]> = {
   light: [{ id: 'default', label: 'Default' }],
   dark: [
     { id: 'default', label: 'Default' },
-    { id: 'dimmed', label: 'Dark Dimmed' },
+    {
+      id: 'dimmed',
+      label: 'Dark Dimmed',
+      load: () => import('./themes/dark-dimmed.css'),
+    },
   ],
 };
+
+const themeFor = (appearance: Appearance, id: string) =>
+  THEMES[appearance].find((t) => t.id === id);
+
+const loaded = new Set<string>();
+
+/** Ensure a non-default theme's CSS is loaded (memoized). Resolves immediately for built-ins. */
+export async function loadTheme(appearance: Appearance, id: string): Promise<void> {
+  const t = themeFor(appearance, id);
+  const key = `${appearance}:${id}`;
+  if (!t?.load || loaded.has(key)) return;
+  await t.load();
+  loaded.add(key);
+}
 
 const MODE_KEY = 'base-box-theme';
 const THEME_KEY: Record<Appearance, string> = {
@@ -34,11 +55,15 @@ export function getMode(): Mode {
   return m && MODES.includes(m) ? m : 'system';
 }
 
-/** The appearance that's actually showing — resolves 'system' against the OS preference. */
-export function effectiveAppearance(): Appearance {
-  const mode = getMode();
+/** The appearance a given mode resolves to — 'system' follows the OS preference. */
+export function appearanceForMode(mode: Mode): Appearance {
   if (mode !== 'system') return mode;
   return darkMql().matches ? 'dark' : 'light';
+}
+
+/** The appearance that's actually showing — resolves 'system' against the OS preference. */
+export function effectiveAppearance(): Appearance {
+  return appearanceForMode(getMode());
 }
 
 /** The selected color theme id for an appearance (falls back to 'default'). */
@@ -63,8 +88,13 @@ export function setMode(mode: Mode): void {
 }
 
 /** Persist a color theme for an appearance. 'default' is the absence of an override, so its
- *  key is removed rather than stored. */
-export function setColorTheme(appearance: Appearance, id: string): void {
+ *  key is removed rather than stored. Loads the theme's CSS *before* applying so switching
+ *  to a lazily-loaded theme doesn't flash the previous palette. */
+export async function setColorTheme(
+  appearance: Appearance,
+  id: string
+): Promise<void> {
+  await loadTheme(appearance, id);
   if (id === 'default') localStorage.removeItem(THEME_KEY[appearance]);
   else localStorage.setItem(THEME_KEY[appearance], id);
   applyTheme();
@@ -75,7 +105,10 @@ export function onSystemAppearanceChange(cb: () => void): void {
   darkMql().addEventListener('change', cb);
 }
 
-/** Apply persisted theming on boot. */
+/** Apply persisted theming on boot and lazily load the effective appearance's theme CSS
+ *  (the anti-FOUC script already set the attributes; this fetches the chunk behind them). */
 export function initTheme(): void {
   applyTheme();
+  const appearance = effectiveAppearance();
+  void loadTheme(appearance, getColorTheme(appearance));
 }

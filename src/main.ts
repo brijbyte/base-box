@@ -15,6 +15,8 @@ import {
   setColorTheme,
   getColorTheme,
   effectiveAppearance,
+  appearanceForMode,
+  loadTheme,
   onSystemAppearanceChange,
   getMode,
   THEMES,
@@ -328,16 +330,24 @@ function syncColorThemes() {
   els.colorTheme.value = getColorTheme(appearance);
 }
 syncColorThemes();
-els.mode.addEventListener('change', () => {
-  setMode(els.mode.value as Mode);
+els.mode.addEventListener('change', async () => {
+  const mode = els.mode.value as Mode;
+  // Preload the theme the new mode will make effective, so the switch doesn't flash.
+  const appearance = appearanceForMode(mode);
+  await loadTheme(appearance, getColorTheme(appearance));
+  setMode(mode);
   syncColorThemes();
 });
 els.colorTheme.addEventListener('change', () =>
   setColorTheme(effectiveAppearance(), els.colorTheme.value)
 );
-// While mode='system', a flip in the OS preference changes which set of themes is relevant.
+// While mode='system', an OS-preference flip changes the effective appearance: load its
+// theme (the data-*-theme attr is already set, the CSS just needs fetching) and re-sync.
 onSystemAppearanceChange(() => {
-  if (getMode() === 'system') syncColorThemes();
+  if (getMode() !== 'system') return;
+  const appearance = effectiveAppearance();
+  void loadTheme(appearance, getColorTheme(appearance));
+  syncColorThemes();
 });
 
 els.share.addEventListener('click', async () => {
