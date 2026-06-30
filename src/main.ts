@@ -9,7 +9,7 @@ import {
   refreshPreview,
   onControllerChange,
 } from './preview';
-import { initTheme, cycleTheme, type Theme } from './theme';
+import { initTheme, cycleTheme, themeLabel, type Theme } from './theme';
 import { downloadZip } from './zip';
 import { onPreviewError } from './messages';
 import { createEditor, type EditorStatus } from './editor';
@@ -89,7 +89,6 @@ let current = '';
 let theme: Theme = initTheme();
 let panel: FileTreePanel;
 
-const themeLabel = (t: Theme) => `Theme: ${t[0].toUpperCase()}${t.slice(1)}`;
 const firstFile = () => fs.list()[0] ?? '';
 
 // Debounced write + hot update on user edits.

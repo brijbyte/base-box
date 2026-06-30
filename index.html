@@ -10,7 +10,7 @@
   <script>
     try {
       var t = localStorage.getItem('base-box-theme');
-      if (t === 'light' || t === 'dark')
+      if (t === 'light' || t === 'dark' || t === 'dark-dimmed')
         document.documentElement.setAttribute('data-theme', t);
     } catch (e) { }
   </script>
