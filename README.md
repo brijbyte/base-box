@@ -47,6 +47,18 @@ npm run build     # tsc + vite build → dist/
 npm run preview   # serve the production build locally
 ```
 
+### Deploy (Cloudflare)
+
+Deployed as static assets on Cloudflare Workers (config in `wrangler.toml`), served at
+<https://base-box.brijbyte.com>.
+
+```bash
+npm run deploy    # build + wrangler deploy
+```
+
+Requires a Cloudflare login (`npx wrangler login`) with access to the target zone.
+`public/_headers` sets the Service-Worker scope and asset cache-control headers.
+
 ### Other scripts
 
 ```bash
