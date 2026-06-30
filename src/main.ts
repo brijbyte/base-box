@@ -327,7 +327,6 @@ els.share.addEventListener('click', async () => {
 els.download.addEventListener('click', () => {
   downloadZip('base-box', fs.toJSON());
   setStatus('downloaded base-box.zip');
-  setSettingsOpen(false);
 });
 
 async function boot() {
