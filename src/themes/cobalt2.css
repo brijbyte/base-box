@@ -1,0 +1,72 @@
+/* "Cobalt2" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-dark + explicit-dark), gated on
+   data-dark-theme='cobalt2'. Palette from the canonical VS Code "Cobalt2" theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='cobalt2'] {
+    color-scheme: dark;
+    --bg: #193549;
+    --fg: #ffffff;
+    --header-bg: #15232d;
+    --header-fg: #ffffff;
+    --bar-bg: #15232d;
+    --border: #2c5170;
+    --muted: #5a7387;
+    --control-bg: #1f4662;
+    --control-fg: #ffffff;
+    --accent: #ffc600;
+    --statusbar-bg: #ffc600;
+    --statusbar-fg: #15232d;
+    --sidebar-bg: #15232d;
+    --selected-bg: #1f4662;
+    --hover-bg: #1c3e57;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #193549;
+    --cm-fg: #ffffff;
+    --cm-cursor: #ffc600;
+    --cm-selection: rgba(0, 99, 154, 0.55);
+    --cm-active-line: rgba(255, 255, 255, 0.05);
+    --cm-gutter-fg: #5a7387;
+    --tok-comment: #0088ff;
+    --tok-keyword: #ff9d00;
+    --tok-string: #3ad900;
+    --tok-number: #ff628c;
+    --tok-function: #ffc600;
+    --tok-type: #80ffbb;
+    --tok-variable: #9effff;
+    --tok-operator: #e1efff;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='cobalt2'] {
+  color-scheme: dark;
+  --bg: #193549;
+  --fg: #ffffff;
+  --header-bg: #15232d;
+  --header-fg: #ffffff;
+  --bar-bg: #15232d;
+  --border: #2c5170;
+  --muted: #5a7387;
+  --control-bg: #1f4662;
+  --control-fg: #ffffff;
+  --accent: #ffc600;
+  --statusbar-bg: #ffc600;
+  --statusbar-fg: #15232d;
+  --sidebar-bg: #15232d;
+  --selected-bg: #1f4662;
+  --hover-bg: #1c3e57;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #193549;
+  --cm-fg: #ffffff;
+  --cm-cursor: #ffc600;
+  --cm-selection: rgba(0, 99, 154, 0.55);
+  --cm-active-line: rgba(255, 255, 255, 0.05);
+  --cm-gutter-fg: #5a7387;
+  --tok-comment: #0088ff;
+  --tok-keyword: #ff9d00;
+  --tok-string: #3ad900;
+  --tok-number: #ff628c;
+  --tok-function: #ffc600;
+  --tok-type: #80ffbb;
+  --tok-variable: #9effff;
+  --tok-operator: #e1efff;
+}

@@ -1,8 +1,8 @@
 // Theming has two orthogonal axes:
 //  - MODE: 'system' | 'light' | 'dark' — does the UI render light or dark?
 //  - COLOR THEME: a palette variant *within* an appearance. Light and dark each have their
-//    own set (light: 'default'; dark: 'default' | 'dimmed'). The color theme that applies is
-//    the one for the *effective* appearance (mode, or the OS preference when mode='system').
+//    own set (see THEMES below). The color theme that applies is the one for the
+//    *effective* appearance (mode, or the OS preference when mode='system').
 export type Mode = 'system' | 'light' | 'dark';
 export type Appearance = 'light' | 'dark';
 
@@ -16,13 +16,56 @@ export interface ColorTheme {
 
 /** Available color themes per appearance. `default` is the built-in palette (not persisted). */
 export const THEMES: Record<Appearance, ColorTheme[]> = {
-  light: [{ id: 'default', label: 'Default' }],
+  light: [
+    { id: 'default', label: 'Default' },
+    {
+      id: 'night-owl-light',
+      label: 'Night Owl Light',
+      load: () => import('./themes/night-owl-light.css'),
+    },
+    {
+      id: 'solarized-light',
+      label: 'Solarized Light',
+      load: () => import('./themes/solarized-light.css'),
+    },
+    {
+      id: 'one-light',
+      label: 'One Light',
+      load: () => import('./themes/one-light.css'),
+    },
+  ],
   dark: [
     { id: 'default', label: 'Default' },
     {
       id: 'dimmed',
       label: 'Dark Dimmed',
       load: () => import('./themes/dark-dimmed.css'),
+    },
+    {
+      id: 'cobalt2',
+      label: 'Cobalt2',
+      load: () => import('./themes/cobalt2.css'),
+    },
+    {
+      id: 'night-owl',
+      label: 'Night Owl',
+      load: () => import('./themes/night-owl.css'),
+    },
+    {
+      id: 'dracula',
+      label: 'Dracula',
+      load: () => import('./themes/dracula.css'),
+    },
+    {
+      id: 'tokyo-night',
+      label: 'Tokyo Night',
+      load: () => import('./themes/tokyo-night.css'),
+    },
+    { id: 'nord', label: 'Nord', load: () => import('./themes/nord.css') },
+    {
+      id: 'monokai',
+      label: 'Monokai',
+      load: () => import('./themes/monokai.css'),
     },
   ],
 };
@@ -33,7 +76,10 @@ const themeFor = (appearance: Appearance, id: string) =>
 const loaded = new Set<string>();
 
 /** Ensure a non-default theme's CSS is loaded (memoized). Resolves immediately for built-ins. */
-export async function loadTheme(appearance: Appearance, id: string): Promise<void> {
+export async function loadTheme(
+  appearance: Appearance,
+  id: string
+): Promise<void> {
   const t = themeFor(appearance, id);
   const key = `${appearance}:${id}`;
   if (!t?.load || loaded.has(key)) return;

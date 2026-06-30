@@ -75,7 +75,9 @@ const highlight = HighlightStyle.define([
     color: 'var(--tok-keyword)',
   },
   {
-    tag: [t.string, t.special(t.string), t.regexp],
+    // JSX/HTML attribute values are strings too — color them like strings, not
+    // like the attribute name (which stays a variable), matching VS Code.
+    tag: [t.string, t.special(t.string), t.regexp, t.attributeValue],
     color: 'var(--tok-string)',
   },
   { tag: [t.number, t.bool, t.null, t.atom], color: 'var(--tok-number)' },
@@ -96,7 +98,6 @@ const highlight = HighlightStyle.define([
     color: 'var(--tok-operator)',
   },
   { tag: [t.definition(t.variableName)], color: 'var(--tok-variable)' },
-  { tag: [t.propertyName, t.attributeValue], color: 'var(--tok-variable)' },
   { tag: [t.heading], color: 'var(--tok-keyword)', fontWeight: 'bold' },
   {
     tag: [t.link, t.url],

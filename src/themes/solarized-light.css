@@ -1,0 +1,70 @@
+/* "Solarized Light" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-light + explicit-light), gated on
+   data-light-theme='solarized-light'. Palette from the canonical "Solarized Light" theme. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-light-theme='solarized-light'] {
+    color-scheme: light;
+    --bg: #fdf6e3;
+    --fg: #657b83;
+    --header-bg: #eee8d5;
+    --header-fg: #586e75;
+    --bar-bg: #eee8d5;
+    --border: #ded8c4;
+    --muted: #93a1a1;
+    --control-bg: #fdf6e3;
+    --control-fg: #586e75;
+    --accent: #268bd2;
+    --statusbar-bg: #268bd2;
+    --sidebar-bg: #eee8d5;
+    --selected-bg: #e6dfc8;
+    --hover-bg: #e9e2cd;
+    --skeleton-sheen: rgba(255, 255, 255, 0.65);
+    --cm-bg: #fdf6e3;
+    --cm-fg: #657b83;
+    --cm-cursor: #586e75;
+    --cm-selection: #eee8d5;
+    --cm-active-line: rgba(0, 43, 54, 0.05);
+    --cm-gutter-fg: #93a1a1;
+    --tok-comment: #93a1a1;
+    --tok-keyword: #859900;
+    --tok-string: #2aa198;
+    --tok-number: #d33682;
+    --tok-function: #268bd2;
+    --tok-type: #b58900;
+    --tok-variable: #268bd2;
+    --tok-operator: #859900;
+  }
+}
+
+:root[data-theme='light'][data-light-theme='solarized-light'] {
+  color-scheme: light;
+  --bg: #fdf6e3;
+  --fg: #657b83;
+  --header-bg: #eee8d5;
+  --header-fg: #586e75;
+  --bar-bg: #eee8d5;
+  --border: #ded8c4;
+  --muted: #93a1a1;
+  --control-bg: #fdf6e3;
+  --control-fg: #586e75;
+  --accent: #268bd2;
+  --statusbar-bg: #268bd2;
+  --sidebar-bg: #eee8d5;
+  --selected-bg: #e6dfc8;
+  --hover-bg: #e9e2cd;
+  --skeleton-sheen: rgba(255, 255, 255, 0.65);
+  --cm-bg: #fdf6e3;
+  --cm-fg: #657b83;
+  --cm-cursor: #586e75;
+  --cm-selection: #eee8d5;
+  --cm-active-line: rgba(0, 43, 54, 0.05);
+  --cm-gutter-fg: #93a1a1;
+  --tok-comment: #93a1a1;
+  --tok-keyword: #859900;
+  --tok-string: #2aa198;
+  --tok-number: #d33682;
+  --tok-function: #268bd2;
+  --tok-type: #b58900;
+  --tok-variable: #268bd2;
+  --tok-operator: #859900;
+}

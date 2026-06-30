@@ -1,0 +1,70 @@
+/* "One Light" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-light + explicit-light), gated on
+   data-light-theme='one-light'. Palette from the canonical "One Light" theme. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-light-theme='one-light'] {
+    color-scheme: light;
+    --bg: #fafafa;
+    --fg: #383a42;
+    --header-bg: #eaeaeb;
+    --header-fg: #383a42;
+    --bar-bg: #eaeaeb;
+    --border: #dbdbdc;
+    --muted: #a0a1a7;
+    --control-bg: #ffffff;
+    --control-fg: #383a42;
+    --accent: #4078f2;
+    --statusbar-bg: #4078f2;
+    --sidebar-bg: #eaeaeb;
+    --selected-bg: #dbe6ff;
+    --hover-bg: #e5e5e6;
+    --skeleton-sheen: rgba(255, 255, 255, 0.65);
+    --cm-bg: #fafafa;
+    --cm-fg: #383a42;
+    --cm-cursor: #526fff;
+    --cm-selection: #dbe6ff;
+    --cm-active-line: rgba(0, 0, 0, 0.04);
+    --cm-gutter-fg: #9d9d9f;
+    --tok-comment: #a0a1a7;
+    --tok-keyword: #a626a4;
+    --tok-string: #50a14f;
+    --tok-number: #986801;
+    --tok-function: #4078f2;
+    --tok-type: #c18401;
+    --tok-variable: #e45649;
+    --tok-operator: #0184bc;
+  }
+}
+
+:root[data-theme='light'][data-light-theme='one-light'] {
+  color-scheme: light;
+  --bg: #fafafa;
+  --fg: #383a42;
+  --header-bg: #eaeaeb;
+  --header-fg: #383a42;
+  --bar-bg: #eaeaeb;
+  --border: #dbdbdc;
+  --muted: #a0a1a7;
+  --control-bg: #ffffff;
+  --control-fg: #383a42;
+  --accent: #4078f2;
+  --statusbar-bg: #4078f2;
+  --sidebar-bg: #eaeaeb;
+  --selected-bg: #dbe6ff;
+  --hover-bg: #e5e5e6;
+  --skeleton-sheen: rgba(255, 255, 255, 0.65);
+  --cm-bg: #fafafa;
+  --cm-fg: #383a42;
+  --cm-cursor: #526fff;
+  --cm-selection: #dbe6ff;
+  --cm-active-line: rgba(0, 0, 0, 0.04);
+  --cm-gutter-fg: #9d9d9f;
+  --tok-comment: #a0a1a7;
+  --tok-keyword: #a626a4;
+  --tok-string: #50a14f;
+  --tok-number: #986801;
+  --tok-function: #4078f2;
+  --tok-type: #c18401;
+  --tok-variable: #e45649;
+  --tok-operator: #0184bc;
+}

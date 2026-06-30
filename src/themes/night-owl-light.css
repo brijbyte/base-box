@@ -1,0 +1,70 @@
+/* "Night Owl Light" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-light + explicit-light), gated on
+   data-light-theme='night-owl-light'. Palette from the canonical "Night Owl Light" theme. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-light-theme='night-owl-light'] {
+    color-scheme: light;
+    --bg: #fbfbfb;
+    --fg: #403f53;
+    --header-bg: #f0f0f0;
+    --header-fg: #403f53;
+    --bar-bg: #f0f0f0;
+    --border: #d9d9d9;
+    --muted: #989fb1;
+    --control-bg: #ffffff;
+    --control-fg: #403f53;
+    --accent: #2aa298;
+    --statusbar-bg: #2aa298;
+    --sidebar-bg: #f0f0f0;
+    --selected-bg: #d3e8f8;
+    --hover-bg: #e9e9eb;
+    --skeleton-sheen: rgba(255, 255, 255, 0.65);
+    --cm-bg: #fbfbfb;
+    --cm-fg: #403f53;
+    --cm-cursor: #90a7b2;
+    --cm-selection: #d3e8f8;
+    --cm-active-line: rgba(0, 0, 0, 0.04);
+    --cm-gutter-fg: #90a7b2;
+    --tok-comment: #989fb1;
+    --tok-keyword: #994cc3;
+    --tok-string: #c96765;
+    --tok-number: #aa0982;
+    --tok-function: #4876d6;
+    --tok-type: #0c969b;
+    --tok-variable: #0c969b;
+    --tok-operator: #0c969b;
+  }
+}
+
+:root[data-theme='light'][data-light-theme='night-owl-light'] {
+  color-scheme: light;
+  --bg: #fbfbfb;
+  --fg: #403f53;
+  --header-bg: #f0f0f0;
+  --header-fg: #403f53;
+  --bar-bg: #f0f0f0;
+  --border: #d9d9d9;
+  --muted: #989fb1;
+  --control-bg: #ffffff;
+  --control-fg: #403f53;
+  --accent: #2aa298;
+  --statusbar-bg: #2aa298;
+  --sidebar-bg: #f0f0f0;
+  --selected-bg: #d3e8f8;
+  --hover-bg: #e9e9eb;
+  --skeleton-sheen: rgba(255, 255, 255, 0.65);
+  --cm-bg: #fbfbfb;
+  --cm-fg: #403f53;
+  --cm-cursor: #90a7b2;
+  --cm-selection: #d3e8f8;
+  --cm-active-line: rgba(0, 0, 0, 0.04);
+  --cm-gutter-fg: #90a7b2;
+  --tok-comment: #989fb1;
+  --tok-keyword: #994cc3;
+  --tok-string: #c96765;
+  --tok-number: #aa0982;
+  --tok-function: #4876d6;
+  --tok-type: #0c969b;
+  --tok-variable: #0c969b;
+  --tok-operator: #0c969b;
+}

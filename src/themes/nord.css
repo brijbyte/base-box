@@ -1,0 +1,70 @@
+/* "Nord" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-dark + explicit-dark), gated on
+   data-dark-theme='nord'. Palette from the canonical VS Code "Nord" theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='nord'] {
+    color-scheme: dark;
+    --bg: #2e3440;
+    --fg: #d8dee9;
+    --header-bg: #272c36;
+    --header-fg: #d8dee9;
+    --bar-bg: #272c36;
+    --border: #4c566a;
+    --muted: #616e88;
+    --control-bg: #3b4252;
+    --control-fg: #eceff4;
+    --accent: #88c0d0;
+    --statusbar-bg: #3b4252;
+    --sidebar-bg: #2e3440;
+    --selected-bg: #434c5e;
+    --hover-bg: #3b4252;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #2e3440;
+    --cm-fg: #d8dee9;
+    --cm-cursor: #d8dee9;
+    --cm-selection: rgba(67, 76, 94, 0.99);
+    --cm-active-line: rgba(255, 255, 255, 0.04);
+    --cm-gutter-fg: #4c566a;
+    --tok-comment: #616e88;
+    --tok-keyword: #81a1c1;
+    --tok-string: #a3be8c;
+    --tok-number: #b48ead;
+    --tok-function: #88c0d0;
+    --tok-type: #8fbcbb;
+    --tok-variable: #d8dee9;
+    --tok-operator: #81a1c1;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='nord'] {
+  color-scheme: dark;
+  --bg: #2e3440;
+  --fg: #d8dee9;
+  --header-bg: #272c36;
+  --header-fg: #d8dee9;
+  --bar-bg: #272c36;
+  --border: #4c566a;
+  --muted: #616e88;
+  --control-bg: #3b4252;
+  --control-fg: #eceff4;
+  --accent: #88c0d0;
+  --statusbar-bg: #3b4252;
+  --sidebar-bg: #2e3440;
+  --selected-bg: #434c5e;
+  --hover-bg: #3b4252;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #2e3440;
+  --cm-fg: #d8dee9;
+  --cm-cursor: #d8dee9;
+  --cm-selection: rgba(67, 76, 94, 0.99);
+  --cm-active-line: rgba(255, 255, 255, 0.04);
+  --cm-gutter-fg: #4c566a;
+  --tok-comment: #616e88;
+  --tok-keyword: #81a1c1;
+  --tok-string: #a3be8c;
+  --tok-number: #b48ead;
+  --tok-function: #88c0d0;
+  --tok-type: #8fbcbb;
+  --tok-variable: #d8dee9;
+  --tok-operator: #81a1c1;
+}

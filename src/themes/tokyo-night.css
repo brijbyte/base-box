@@ -1,0 +1,72 @@
+/* "Tokyo Night" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-dark + explicit-dark), gated on
+   data-dark-theme='tokyo-night'. Palette from the canonical VS Code "Tokyo Night" theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='tokyo-night'] {
+    color-scheme: dark;
+    --bg: #1a1b26;
+    --fg: #a9b1d6;
+    --header-bg: #16161e;
+    --header-fg: #a9b1d6;
+    --bar-bg: #16161e;
+    --border: #2c3047;
+    --muted: #565f89;
+    --control-bg: #24283b;
+    --control-fg: #c0caf5;
+    --accent: #7aa2f7;
+    --statusbar-bg: #7aa2f7;
+    --statusbar-fg: #1a1b26;
+    --sidebar-bg: #16161e;
+    --selected-bg: #33467c;
+    --hover-bg: #24283b;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #1a1b26;
+    --cm-fg: #a9b1d6;
+    --cm-cursor: #c0caf5;
+    --cm-selection: rgba(51, 70, 124, 0.7);
+    --cm-active-line: rgba(255, 255, 255, 0.04);
+    --cm-gutter-fg: #3b4261;
+    --tok-comment: #565f89;
+    --tok-keyword: #bb9af7;
+    --tok-string: #9ece6a;
+    --tok-number: #ff9e64;
+    --tok-function: #7aa2f7;
+    --tok-type: #2ac3de;
+    --tok-variable: #c0caf5;
+    --tok-operator: #89ddff;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='tokyo-night'] {
+  color-scheme: dark;
+  --bg: #1a1b26;
+  --fg: #a9b1d6;
+  --header-bg: #16161e;
+  --header-fg: #a9b1d6;
+  --bar-bg: #16161e;
+  --border: #2c3047;
+  --muted: #565f89;
+  --control-bg: #24283b;
+  --control-fg: #c0caf5;
+  --accent: #7aa2f7;
+  --statusbar-bg: #7aa2f7;
+  --statusbar-fg: #1a1b26;
+  --sidebar-bg: #16161e;
+  --selected-bg: #33467c;
+  --hover-bg: #24283b;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #1a1b26;
+  --cm-fg: #a9b1d6;
+  --cm-cursor: #c0caf5;
+  --cm-selection: rgba(51, 70, 124, 0.7);
+  --cm-active-line: rgba(255, 255, 255, 0.04);
+  --cm-gutter-fg: #3b4261;
+  --tok-comment: #565f89;
+  --tok-keyword: #bb9af7;
+  --tok-string: #9ece6a;
+  --tok-number: #ff9e64;
+  --tok-function: #7aa2f7;
+  --tok-type: #2ac3de;
+  --tok-variable: #c0caf5;
+  --tok-operator: #89ddff;
+}

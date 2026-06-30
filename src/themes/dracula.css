@@ -1,0 +1,72 @@
+/* "Dracula" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-dark + explicit-dark), gated on
+   data-dark-theme='dracula'. Palette from the canonical VS Code "Dracula" theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='dracula'] {
+    color-scheme: dark;
+    --bg: #282a36;
+    --fg: #f8f8f2;
+    --header-bg: #21222c;
+    --header-fg: #f8f8f2;
+    --bar-bg: #21222c;
+    --border: #3b3d4d;
+    --muted: #6272a4;
+    --control-bg: #343746;
+    --control-fg: #f8f8f2;
+    --accent: #bd93f9;
+    --statusbar-bg: #bd93f9;
+    --statusbar-fg: #282a36;
+    --sidebar-bg: #21222c;
+    --selected-bg: #44475a;
+    --hover-bg: #343746;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #282a36;
+    --cm-fg: #f8f8f2;
+    --cm-cursor: #f8f8f0;
+    --cm-selection: rgba(68, 71, 90, 0.99);
+    --cm-active-line: rgba(255, 255, 255, 0.05);
+    --cm-gutter-fg: #6272a4;
+    --tok-comment: #6272a4;
+    --tok-keyword: #ff79c6;
+    --tok-string: #f1fa8c;
+    --tok-number: #bd93f9;
+    --tok-function: #50fa7b;
+    --tok-type: #8be9fd;
+    --tok-variable: #f8f8f2;
+    --tok-operator: #ff79c6;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='dracula'] {
+  color-scheme: dark;
+  --bg: #282a36;
+  --fg: #f8f8f2;
+  --header-bg: #21222c;
+  --header-fg: #f8f8f2;
+  --bar-bg: #21222c;
+  --border: #3b3d4d;
+  --muted: #6272a4;
+  --control-bg: #343746;
+  --control-fg: #f8f8f2;
+  --accent: #bd93f9;
+  --statusbar-bg: #bd93f9;
+  --statusbar-fg: #282a36;
+  --sidebar-bg: #21222c;
+  --selected-bg: #44475a;
+  --hover-bg: #343746;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #282a36;
+  --cm-fg: #f8f8f2;
+  --cm-cursor: #f8f8f0;
+  --cm-selection: rgba(68, 71, 90, 0.99);
+  --cm-active-line: rgba(255, 255, 255, 0.05);
+  --cm-gutter-fg: #6272a4;
+  --tok-comment: #6272a4;
+  --tok-keyword: #ff79c6;
+  --tok-string: #f1fa8c;
+  --tok-number: #bd93f9;
+  --tok-function: #50fa7b;
+  --tok-type: #8be9fd;
+  --tok-variable: #f8f8f2;
+  --tok-operator: #ff79c6;
+}

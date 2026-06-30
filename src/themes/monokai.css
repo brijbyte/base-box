@@ -1,0 +1,72 @@
+/* "Monokai" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-dark + explicit-dark), gated on
+   data-dark-theme='monokai'. Palette from the canonical VS Code "Monokai" theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='monokai'] {
+    color-scheme: dark;
+    --bg: #272822;
+    --fg: #f8f8f2;
+    --header-bg: #1e1f1c;
+    --header-fg: #f8f8f2;
+    --bar-bg: #1e1f1c;
+    --border: #49483e;
+    --muted: #88846f;
+    --control-bg: #3e3d32;
+    --control-fg: #f8f8f2;
+    --accent: #a6e22e;
+    --statusbar-bg: #a6e22e;
+    --statusbar-fg: #272822;
+    --sidebar-bg: #1e1f1c;
+    --selected-bg: #49483e;
+    --hover-bg: #3e3d32;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #272822;
+    --cm-fg: #f8f8f2;
+    --cm-cursor: #f8f8f0;
+    --cm-selection: rgba(73, 72, 62, 0.99);
+    --cm-active-line: rgba(255, 255, 255, 0.04);
+    --cm-gutter-fg: #90908a;
+    --tok-comment: #88846f;
+    --tok-keyword: #f92672;
+    --tok-string: #e6db74;
+    --tok-number: #ae81ff;
+    --tok-function: #a6e22e;
+    --tok-type: #66d9ef;
+    --tok-variable: #f8f8f2;
+    --tok-operator: #f92672;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='monokai'] {
+  color-scheme: dark;
+  --bg: #272822;
+  --fg: #f8f8f2;
+  --header-bg: #1e1f1c;
+  --header-fg: #f8f8f2;
+  --bar-bg: #1e1f1c;
+  --border: #49483e;
+  --muted: #88846f;
+  --control-bg: #3e3d32;
+  --control-fg: #f8f8f2;
+  --accent: #a6e22e;
+  --statusbar-bg: #a6e22e;
+  --statusbar-fg: #272822;
+  --sidebar-bg: #1e1f1c;
+  --selected-bg: #49483e;
+  --hover-bg: #3e3d32;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #272822;
+  --cm-fg: #f8f8f2;
+  --cm-cursor: #f8f8f0;
+  --cm-selection: rgba(73, 72, 62, 0.99);
+  --cm-active-line: rgba(255, 255, 255, 0.04);
+  --cm-gutter-fg: #90908a;
+  --tok-comment: #88846f;
+  --tok-keyword: #f92672;
+  --tok-string: #e6db74;
+  --tok-number: #ae81ff;
+  --tok-function: #a6e22e;
+  --tok-type: #66d9ef;
+  --tok-variable: #f8f8f2;
+  --tok-operator: #f92672;
+}

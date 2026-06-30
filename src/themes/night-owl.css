@@ -1,0 +1,70 @@
+/* "Night Owl" color theme — loaded lazily (see theme.ts) only when selected.
+   Two mutually-exclusive selector pairs (system-dark + explicit-dark), gated on
+   data-dark-theme='night-owl'. Palette from the canonical VS Code "Night Owl" theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-dark-theme='night-owl'] {
+    color-scheme: dark;
+    --bg: #011627;
+    --fg: #d6deeb;
+    --header-bg: #01111d;
+    --header-fg: #d6deeb;
+    --bar-bg: #01111d;
+    --border: #1e4060;
+    --muted: #637777;
+    --control-bg: #0b2942;
+    --control-fg: #d6deeb;
+    --accent: #82aaff;
+    --statusbar-bg: #0b2942;
+    --sidebar-bg: #011627;
+    --selected-bg: #1d3b53;
+    --hover-bg: #0e293f;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #011627;
+    --cm-fg: #d6deeb;
+    --cm-cursor: #80a4c2;
+    --cm-selection: rgba(29, 59, 83, 0.99);
+    --cm-active-line: rgba(255, 255, 255, 0.05);
+    --cm-gutter-fg: #4b6479;
+    --tok-comment: #637777;
+    --tok-keyword: #c792ea;
+    --tok-string: #ecc48d;
+    --tok-number: #f78c6c;
+    --tok-function: #82aaff;
+    --tok-type: #ffcb8b;
+    --tok-variable: #addb67;
+    --tok-operator: #7fdbca;
+  }
+}
+
+:root[data-theme='dark'][data-dark-theme='night-owl'] {
+  color-scheme: dark;
+  --bg: #011627;
+  --fg: #d6deeb;
+  --header-bg: #01111d;
+  --header-fg: #d6deeb;
+  --bar-bg: #01111d;
+  --border: #1e4060;
+  --muted: #637777;
+  --control-bg: #0b2942;
+  --control-fg: #d6deeb;
+  --accent: #82aaff;
+  --statusbar-bg: #0b2942;
+  --sidebar-bg: #011627;
+  --selected-bg: #1d3b53;
+  --hover-bg: #0e293f;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #011627;
+  --cm-fg: #d6deeb;
+  --cm-cursor: #80a4c2;
+  --cm-selection: rgba(29, 59, 83, 0.99);
+  --cm-active-line: rgba(255, 255, 255, 0.05);
+  --cm-gutter-fg: #4b6479;
+  --tok-comment: #637777;
+  --tok-keyword: #c792ea;
+  --tok-string: #ecc48d;
+  --tok-number: #f78c6c;
+  --tok-function: #82aaff;
+  --tok-type: #ffcb8b;
+  --tok-variable: #addb67;
+  --tok-operator: #7fdbca;
+}

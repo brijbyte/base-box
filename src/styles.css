@@ -216,7 +216,9 @@ header strong {
   padding: 0 10px;
   /* The theme's prominent color: dedicated --statusbar-bg if a theme sets one, else accent. */
   background: var(--statusbar-bg, var(--accent));
-  color: #ffffff;
+  /* White by default; themes with a light status bar (yellow/green/etc.) override
+     with a dark --statusbar-fg so the text stays legible. */
+  color: var(--statusbar-fg, #ffffff);
   border-top: 1px solid var(--border);
   font-size: 12px;
   user-select: none;
