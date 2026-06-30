@@ -347,6 +347,7 @@ async function boot() {
     onMove,
   });
   els.treeLoading.hidden = true;
+  els.treeLoading.parentElement?.classList.remove('tree-loading');
   openFile(initial);
   els.editorLoading.hidden = true;
 

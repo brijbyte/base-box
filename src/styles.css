@@ -496,6 +496,11 @@ header strong {
   opacity: 1;
 }
 
+/* Hide the toolbar entirely while the tree is still loading (no file ops yet). */
+.pane.sidebar.tree-loading .tree-actions {
+  display: none;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;

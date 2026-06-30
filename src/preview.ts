@@ -91,8 +91,11 @@ export async function updateFile(
 }
 
 /** Re-sync + refresh whenever a new SW takes control (it starts with an empty FS). */
-export function onControllerChange(handler: () => void): void {
+export function onControllerChange(handler: () => void): () => void {
   navigator.serviceWorker.addEventListener('controllerchange', handler);
+  return () => {
+    navigator.serviceWorker.removeEventListener('controllerchange', handler);
+  };
 }
 
 /** Point the iframe at the SW-served preview, cache-busted to force a reload. */
