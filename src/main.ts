@@ -12,9 +12,13 @@ import {
 import {
   initTheme,
   setMode,
-  setDarkTheme,
+  setColorTheme,
+  getColorTheme,
+  effectiveAppearance,
+  onSystemAppearanceChange,
+  getMode,
+  THEMES,
   type Mode,
-  type DarkTheme,
 } from './theme';
 import { downloadZip } from './zip';
 import { onPreviewError } from './messages';
@@ -71,7 +75,7 @@ const els = {
   share: document.querySelector<HTMLButtonElement>('#share')!,
   download: document.querySelector<HTMLButtonElement>('#download')!,
   mode: document.querySelector<HTMLSelectElement>('#mode')!,
-  darkTheme: document.querySelector<HTMLSelectElement>('#darkTheme')!,
+  colorTheme: document.querySelector<HTMLSelectElement>('#colorTheme')!,
   settings: document.querySelector<HTMLButtonElement>('#settings')!,
   settingsPanel: document.querySelector<HTMLDivElement>('#settingsPanel')!,
   filename: document.querySelector<HTMLDivElement>('#filename')!,
@@ -310,23 +314,31 @@ document.addEventListener('keydown', (e) => {
 });
 
 // --- Theme ---
-// Two axes (see theme.ts): MODE (light/dark/system) and the dark COLOR theme. Both flip
-// data-* attrs on <html>; the var-based CM theme, tree (--trees-* overrides) and chrome
-// all follow with no reconfigure. The dark color theme only shows when the mode is dark.
-const initialTheme = initTheme();
-els.mode.value = initialTheme.mode;
-els.darkTheme.value = initialTheme.darkTheme;
-// The dark color theme can't apply in light mode, so disable it there for clarity.
-const syncDarkThemeEnabled = () =>
-  (els.darkTheme.disabled = els.mode.value === 'light');
-syncDarkThemeEnabled();
+// Two axes (see theme.ts): MODE (light/dark/system) and the COLOR theme per appearance.
+// Both flip data-* attrs on <html>; the var-based CM theme, tree (--trees-* overrides) and
+// chrome all follow with no reconfigure. The color-theme select lists the themes for the
+// *effective* appearance (so dark themes when dark is showing, light themes when light).
+initTheme();
+els.mode.value = getMode();
+function syncColorThemes() {
+  const appearance = effectiveAppearance();
+  els.colorTheme.replaceChildren(
+    ...THEMES[appearance].map((t) => new Option(t.label, t.id))
+  );
+  els.colorTheme.value = getColorTheme(appearance);
+}
+syncColorThemes();
 els.mode.addEventListener('change', () => {
   setMode(els.mode.value as Mode);
-  syncDarkThemeEnabled();
+  syncColorThemes();
 });
-els.darkTheme.addEventListener('change', () =>
-  setDarkTheme(els.darkTheme.value as DarkTheme)
+els.colorTheme.addEventListener('change', () =>
+  setColorTheme(effectiveAppearance(), els.colorTheme.value)
 );
+// While mode='system', a flip in the OS preference changes which set of themes is relevant.
+onSystemAppearanceChange(() => {
+  if (getMode() === 'system') syncColorThemes();
+});
 
 els.share.addEventListener('click', async () => {
   const u = new URL(`${location.origin}${location.pathname}`);

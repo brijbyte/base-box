@@ -708,7 +708,3 @@ button:focus-visible {
   outline-offset: 1px;
 }
 
-select:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}

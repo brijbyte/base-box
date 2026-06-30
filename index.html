@@ -9,12 +9,13 @@
   <!-- Anti-FOUC: apply a persisted theme override before first paint. -->
   <script>
     try {
+      var r = document.documentElement;
       var t = localStorage.getItem('base-box-theme');
-      if (t === 'light' || t === 'dark')
-        document.documentElement.setAttribute('data-theme', t);
+      if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t);
       var d = localStorage.getItem('base-box-dark-theme');
-      if (d === 'dimmed')
-        document.documentElement.setAttribute('data-dark-theme', d);
+      if (d) r.setAttribute('data-dark-theme', d);
+      var l = localStorage.getItem('base-box-light-theme');
+      if (l) r.setAttribute('data-light-theme', l);
     } catch (e) { }
   </script>
   <link rel="stylesheet" href="/src/styles.css" />
@@ -44,11 +45,8 @@
             </select>
           </label>
           <label class="setting-row">
-            <span>Dark theme</span>
-            <select id="darkTheme" title="Color theme used in dark mode">
-              <option value="default">Default</option>
-              <option value="dimmed">Dark Dimmed</option>
-            </select>
+            <span>Color theme</span>
+            <select id="colorTheme" title="Color theme for the current appearance"></select>
           </label>
         </div>
       </div>
