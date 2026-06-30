@@ -18,6 +18,23 @@
       if (l) r.setAttribute('data-light-theme', l);
     } catch (e) { }
   </script>
+  <!-- Anti-flash: hydrate stored pane sizes (percent → px) before first paint.
+       Defaults/key/gutter width must mirror src/resize.ts. -->
+  <script>
+    try {
+      var raw = localStorage.getItem('base-box-pane-sizes');
+      var s = raw ? JSON.parse(raw) : null;
+      if (!s || typeof s.sidebar !== 'number' || typeof s.editor !== 'number' || typeof s.preview !== 'number')
+        s = { sidebar: 18, editor: 41, preview: 41 };
+      var space = document.documentElement.clientWidth - 2; // minus the two 1px gutters
+      var sidebar = (s.sidebar / 100) * space, editor = (s.editor / 100) * space;
+      if (sidebar > 360) { editor += sidebar - 360; sidebar = 360; } // cap file-tree width
+      var rs = document.documentElement.style;
+      rs.setProperty('--col-sidebar', sidebar + 'px');
+      rs.setProperty('--col-editor', editor + 'px');
+      rs.setProperty('--col-preview', (s.preview / 100) * space + 'px');
+    } catch (e) { }
+  </script>
   <link rel="stylesheet" href="/src/styles.css" />
 </head>
 
@@ -86,6 +103,18 @@
             style="width: 48%"></span></div>
       </div>
     </div>
+    <div class="gutter" id="gutter1" role="separator" aria-orientation="vertical" aria-label="Resize file tree">
+      <span class="gutter-grip" aria-hidden="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="9" cy="6" r="1" />
+          <circle cx="9" cy="12" r="1" />
+          <circle cx="9" cy="18" r="1" />
+          <circle cx="15" cy="6" r="1" />
+          <circle cx="15" cy="12" r="1" />
+          <circle cx="15" cy="18" r="1" />
+        </svg>
+      </span>
+    </div>
     <div class="pane editor">
       <div class="bar"><span id="filename"></span></div>
       <div id="editor"></div>
@@ -113,6 +142,18 @@
         <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
             style="width: 44%"></span></div>
       </div>
+    </div>
+    <div class="gutter" id="gutter2" role="separator" aria-orientation="vertical" aria-label="Resize editor">
+      <span class="gutter-grip" aria-hidden="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="9" cy="6" r="1" />
+          <circle cx="9" cy="12" r="1" />
+          <circle cx="9" cy="18" r="1" />
+          <circle cx="15" cy="6" r="1" />
+          <circle cx="15" cy="12" r="1" />
+          <circle cx="15" cy="18" r="1" />
+        </svg>
+      </span>
     </div>
     <div class="pane">
       <div class="bar preview-header">
@@ -149,9 +190,9 @@
           </div>
         </div>
       </div>
-      <div class="console" id="console">
+      <div class="console is-collapsed" id="console">
         <div class="bar console-bar">
-          <button class="console-toggle" id="consoleToggle" title="Toggle console" aria-expanded="true">
+          <button class="console-toggle" id="consoleToggle" title="Toggle console" aria-expanded="false">
             <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" />
             </svg>

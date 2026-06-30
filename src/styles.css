@@ -9,6 +9,9 @@
    :not([data-theme='light']) so an explicit light choice always wins. */
 :root {
   color-scheme: light;
+  /* Monospace stack mirroring VS Code's editor default (OS native first). */
+  --mono: ui-monospace, 'SF Mono', 'SFMono-Regular', 'Cascadia Code',
+    'Cascadia Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   /* chrome */
   --bg: #ffffff;
   --fg: #3b3b3b;
@@ -130,18 +133,64 @@ html,
 body {
   margin: 0;
   height: 100%;
-  font:
-    14px/1.4 ui-monospace,
-    monospace;
+  font: 14px/1.4 var(--mono);
   background: var(--bg);
   color: var(--fg);
+  /* Grayscale antialiasing — the crisp look VS Code (Chromium) renders with. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #app {
   display: grid;
-  grid-template-columns: 220px 1fr 1fr;
+  /* Pane widths are driven by JS (px, hydrated from stored percentages); the gutters
+     are fixed drag handles. Fallbacks apply before the resize module runs. */
+  grid-template-columns:
+    var(--col-sidebar, 220px) var(--gutter-w) var(--col-editor, 1fr)
+    var(--gutter-w) var(--col-preview, 1fr);
   grid-template-rows: 1fr auto;
+  --gutter-w: 1px;
   height: 100%;
+}
+
+/* 1px column separators that double as drag handles. The thin line keeps the
+   original divider look; a centered grip widens the actual grab target. */
+.gutter {
+  position: relative;
+  cursor: col-resize;
+  background: var(--border);
+}
+
+.gutter-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 28px;
+  z-index: 6;
+  border-radius: 5px;
+  background: var(--bar-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.gutter:hover .gutter-grip,
+.gutter.is-dragging .gutter-grip {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.gutter-grip svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  stroke: none;
 }
 
 /* Settings gear pinned to the status bar's right edge, popover anchored above it. */
@@ -193,7 +242,7 @@ body {
 /* Bottom status bar: spans all columns, fixed height. Message on the left,
    editor info (cursor / indent / language / diagnostics) on the right. */
 #statusbar {
-  grid-column: 1 / 4;
+  grid-column: 1 / -1;
   height: 22px;
   display: flex;
   align-items: center;
@@ -460,9 +509,7 @@ body {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--fg);
-  font:
-    12px/1.5 ui-monospace,
-    monospace;
+  font: 12px/1.5 var(--mono);
 }
 
 .pane > .bar {
@@ -478,7 +525,6 @@ body {
 }
 
 .pane.sidebar {
-  border-right: 1px solid var(--border);
   background: var(--sidebar-bg);
 }
 
@@ -627,9 +673,8 @@ body {
 }
 
 #editor .cm-scroller {
-  font:
-    13px/1.5 ui-monospace,
-    monospace;
+  font: 13px/1.5 var(--mono);
+  font-variant-ligatures: none; /* match VS Code's default (fontLigatures: off) */
 }
 
 /* Holds the iframe + its overlays; the console panel sits below it in the pane. */
@@ -824,9 +869,6 @@ body {
   font-style: italic;
 }
 
-.pane.editor {
-  border-right: 1px solid var(--border);
-}
 
 button,
 select {

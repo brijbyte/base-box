@@ -30,6 +30,7 @@ import {
 } from './messages';
 import { createEditor, type EditorStatus } from './editor';
 import { createFileTree, type FileTreePanel } from './filetree';
+import { initResizablePanes } from './resize';
 import type { LspClient } from './lsp/bridge'; // type-only: no runtime import
 
 const fs = new MemFS((await filesFromUrl()) ?? SAMPLE);
@@ -108,6 +109,8 @@ const els = {
   indent: document.querySelector<HTMLSpanElement>('#indent')!,
   language: document.querySelector<HTMLSpanElement>('#language')!,
 };
+
+initResizablePanes();
 
 let current = '';
 let panel: FileTreePanel;
@@ -309,7 +312,6 @@ function appendConsole(level: ConsoleLevel, text: string) {
   lastKey = key;
 
   if (atBottom) els.consoleLog.scrollTop = els.consoleLog.scrollHeight;
-  if (level === 'error') setConsoleCollapsed(false); // surface errors automatically
 }
 
 els.consoleClear.addEventListener('click', clearConsole);
