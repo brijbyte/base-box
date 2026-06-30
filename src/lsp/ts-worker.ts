@@ -59,10 +59,16 @@ declare module '*.css';
 let files: Record<string, string> = {};
 let deps: Record<string, string> = {};
 
-/** Adopt a fresh file map (+ ambient decls) and re-derive deps from package.json. */
+let lastPkgJson: string | undefined;
+
+/** Adopt a fresh file map (+ ambient decls); re-derive deps only if package.json changed. */
 function setFiles(next: Record<string, string> | undefined) {
   files = { [ENV_DTS_PATH]: ENV_DTS, ...next };
-  deps = parseDeps(files['package.json']);
+  const pkgJson = files['package.json'];
+  if (pkgJson !== lastPkgJson) {
+    lastPkgJson = pkgJson;
+    deps = parseDeps(pkgJson);
+  }
 }
 
 /** Merge dependencies + devDependencies from a package.json string (versions only). */

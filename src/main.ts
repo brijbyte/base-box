@@ -112,7 +112,14 @@ const editor = createEditor(
     fs.write(current, value);
     const path = current;
     clearTimeout(debounce);
-    debounce = setTimeout(() => hotUpdate(path, value), 300);
+    debounce = setTimeout(() => {
+      // Keep each running LSP's snapshot current so cross-file imports see edits,
+      // not just structural changes (rebuild). Otherwise importers read a stale copy.
+      const files = fs.toJSON();
+      tsLsp.instance()?.sync(files);
+      cssLsp.instance()?.sync(files);
+      hotUpdate(path, value);
+    }, 300);
   },
   {
     lspSupport: (path) => {
