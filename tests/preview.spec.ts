@@ -164,25 +164,28 @@ test('caches esbuild.wasm in Cache Storage', async ({ page }) => {
   expect(cachedCount).toBeGreaterThan(0);
 });
 
-test('theme defaults to system and cycles + persists', async ({ page }) => {
+test('mode select defaults to system and applies + persists', async ({
+  page,
+}) => {
   await page.goto('/');
   const html = page.locator('html');
-  const btn = page.locator('#theme');
+  await page.locator('#settings').click();
+  const mode = page.locator('#mode');
 
   // Default: system → no explicit override, CSS prefers-color-scheme decides.
-  await expect(btn).toHaveText('Theme: System');
+  await expect(mode).toHaveValue('system');
   await expect(html).not.toHaveAttribute('data-theme', /.*/);
 
-  await btn.click();
-  await expect(btn).toHaveText('Theme: Light');
+  await mode.selectOption('light');
   await expect(html).toHaveAttribute('data-theme', 'light');
 
-  await btn.click();
+  await mode.selectOption('dark');
   await expect(html).toHaveAttribute('data-theme', 'dark');
 
-  // Persists across reload.
+  // Persists across reload (anti-FOUC script + initTheme restore it).
   await page.reload();
-  await expect(page.locator('#theme')).toHaveText('Theme: Dark');
+  await page.locator('#settings').click();
+  await expect(page.locator('#mode')).toHaveValue('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
@@ -193,7 +196,7 @@ test('file tree switches the open file in CodeMirror', async ({ page }) => {
 
   await page.getByRole('treeitem', { name: 'App.tsx' }).click();
   await expect(page.locator('#filename')).toHaveText('src/App.tsx');
-  await expect(page.locator('#editor .cm-content')).toContainText('Combobox');
+  await expect(page.locator('#editor .cm-content')).toContainText('Toast');
 
   await page.getByRole('treeitem', { name: 'index.html' }).click();
   await expect(page.locator('#filename')).toHaveText('index.html');

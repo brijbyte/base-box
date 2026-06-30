@@ -21,6 +21,7 @@ const LANG_LABELS: Record<string, string> = {
   scss: 'SCSS',
   less: 'Less',
   json: 'JSON',
+  vue: 'Vue',
 };
 const languageLabel = (path: string) =>
   path
@@ -54,6 +55,8 @@ async function languageFor(path: string): Promise<Extension> {
       return (await import('@codemirror/lang-css')).css();
     case 'json':
       return (await import('@codemirror/lang-json')).json();
+    case 'vue':
+      return (await import('@codemirror/lang-vue')).vue();
     default:
       return [];
   }

@@ -1,7 +1,9 @@
 import './polyfill';
 import { MemFS } from './fs';
 import { filesFromUrl, encodeFiles } from './codec';
-import { SAMPLE } from './sample';
+import { SAMPLE, VUE_SAMPLE } from './sample';
+import { compileSfc, isVue, vueErrorModule } from './vue';
+import type { FileMap } from './types';
 import {
   registerServiceWorker,
   syncFiles,
@@ -85,6 +87,7 @@ const els = {
   colorTheme: document.querySelector<HTMLSelectElement>('#colorTheme')!,
   settings: document.querySelector<HTMLButtonElement>('#settings')!,
   settingsPanel: document.querySelector<HTMLDivElement>('#settingsPanel')!,
+  template: document.querySelector<HTMLSelectElement>('#template')!,
   filename: document.querySelector<HTMLDivElement>('#filename')!,
   newFile: document.querySelector<HTMLButtonElement>('#new')!,
   rename: document.querySelector<HTMLButtonElement>('#rename')!,
@@ -164,7 +167,9 @@ async function hotUpdate(path: string, content: string) {
   setStatus('updating…');
   clearPreviewError(); // stale error clears on edit; re-posted by the iframe if it recurs
   try {
-    const { reload, boundaries } = await updateFile(path, content);
+    // .vue is precompiled on the main thread; a compile error surfaces here, not via the SW.
+    const swContent = isVue(path) ? await compileSfc(path, content) : content;
+    const { reload, boundaries } = await updateFile(path, swContent);
     if (reload) {
       reloadPreview('Reloading…');
       setStatus(`reloaded (${path})`);
@@ -172,7 +177,9 @@ async function hotUpdate(path: string, content: string) {
       setStatus(`hot-updated ${boundaries.join(', ') || path}`);
     }
   } catch (err) {
-    setStatus(`error: ${(err as Error).message}`);
+    const msg = (err as Error).message;
+    if (isVue(path)) showPreviewError('compile', msg, path); // SFC failed to compile
+    setStatus(`error: ${msg}`);
   }
 }
 
@@ -353,13 +360,36 @@ function syncUrlFile(path: string) {
   history.replaceState(null, '', url);
 }
 
+/**
+ * Map a FileMap to what the SW serves: every `.vue` file is precompiled to JS here (the SW
+ * stays Vue-unaware — its bundle never ships the compiler). A failed SFC compile becomes a
+ * throwing stub plus a preview-error overlay, so one bad file doesn't break the whole sync.
+ */
+async function toSwFiles(files: FileMap): Promise<FileMap> {
+  const out: FileMap = {};
+  for (const [path, content] of Object.entries(files)) {
+    if (!isVue(path)) {
+      out[path] = content;
+      continue;
+    }
+    try {
+      out[path] = await compileSfc(path, content);
+    } catch (err) {
+      const msg = (err as Error).message;
+      out[path] = vueErrorModule(path, msg);
+      showPreviewError('compile', msg, path);
+    }
+  }
+  return out;
+}
+
 async function rebuild() {
   setStatus('syncing…');
   // Keep each running language server's file map current (no-op until it's booted).
   const files = fs.toJSON();
   tsLsp.instance()?.sync(files);
   cssLsp.instance()?.sync(files);
-  const count = await syncFiles(files);
+  const count = await syncFiles(await toSwFiles(files));
   reloadPreview('Compiling…');
   setStatus(`synced ${count} files`);
 }
@@ -485,6 +515,38 @@ els.share.addEventListener('click', async () => {
 els.download.addEventListener('click', () => {
   downloadZip('base-box', fs.toJSON());
   setStatus('downloaded base-box.zip');
+});
+
+// --- Template picker (load a starter project) ---
+const TEMPLATES: Record<string, FileMap> = { react: SAMPLE, vue: VUE_SAMPLE };
+
+/** Replace the whole project with `files`: reset the FS, rebuild the tree, re-sync. */
+async function loadProject(files: FileMap) {
+  for (const f of fs.list()) fs.delete(f);
+  for (const [p, c] of Object.entries(files)) fs.write(p, c);
+  const initial = fs.has('index.html') ? 'index.html' : firstFile();
+  // Tear down the old tree DOM before re-mounting (createFileTree appends).
+  els.tree.replaceChildren();
+  panel = createFileTree(els.tree, fs.list(), initial, {
+    onOpen: openFile,
+    onAdd,
+    onRemove,
+    onMove,
+  });
+  openFile(initial);
+  // Drop a stale ?files= so a refresh shows the freshly-loaded template.
+  const url = new URL(location.href);
+  url.searchParams.delete('files');
+  history.replaceState(null, '', url);
+  await rebuild();
+}
+
+els.template.addEventListener('change', async () => {
+  const files = TEMPLATES[els.template.value];
+  els.template.value = ''; // snap back to the "Template…" placeholder
+  if (!files) return;
+  setSettingsOpen(false);
+  await loadProject(files);
 });
 
 async function boot() {

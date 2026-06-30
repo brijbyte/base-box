@@ -40,14 +40,21 @@ const MIME: Record<string, string> = {
   ts: 'text/javascript',
   tsx: 'text/javascript',
   jsx: 'text/javascript',
+  vue: 'text/javascript',
   json: 'application/json',
   css: 'text/css',
   svg: 'image/svg+xml',
 };
-const JS_EXTS = new Set(['js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx']);
+// `.vue` is included because the main thread precompiles SFCs to JS before syncing, so by
+// the time the SW sees a `.vue` file its content is an ordinary (possibly-TS) ESM module.
+const JS_EXTS = new Set(['js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'vue']);
 
 const ext = (p: string) => p.slice(p.lastIndexOf('.') + 1).toLowerCase();
 const contentType = (p: string) => MIME[ext(p)] ?? 'text/plain';
+// esbuild has no `.vue` loader; the precompiled SFC body is plain TS/JS, so strip it as `ts`.
+type EsbuildLoader = 'ts' | 'tsx' | 'jsx' | 'js';
+const esbuildLoader = (p: string): EsbuildLoader =>
+  ext(p) === 'vue' ? 'ts' : (ext(p) as EsbuildLoader);
 
 // ---- esbuild + lexer init (once) ----
 // Key the cache by esbuild version: the wasm and the JS must match exactly, and in
@@ -174,7 +181,7 @@ async function getModule(path: string): Promise<string | undefined> {
   if (cached && cached.src === src) return cached.out;
 
   accepts.set(path, detectAccept(src));
-  const loader = ext(path) as 'ts' | 'tsx' | 'jsx' | 'js';
+  const loader = esbuildLoader(path);
   const result = await esbuild.transform(src, {
     loader,
     format: 'esm',
@@ -261,7 +268,7 @@ async function buildImportMap(): Promise<Record<string, string>> {
     if (src === undefined) continue;
     // Lex the transformed (pre-rewrite) code so esbuild-injected imports (jsx-runtime) count.
     await ensureReady();
-    const loader = ext(file) as 'ts' | 'tsx' | 'jsx' | 'js';
+    const loader = esbuildLoader(file);
     // A syntax error in one file must not break HTML serving; that file's own module
     // fetch surfaces the compile error (the overlay). Just skip it for the import map.
     try {
