@@ -62,7 +62,10 @@ export function initResizablePanes() {
     }
     root.style.setProperty('--col-sidebar', `${sidebar}px`);
     root.style.setProperty('--col-editor', `${editor}px`);
-    root.style.setProperty('--col-preview', `${(sizes.preview / 100) * space}px`);
+    root.style.setProperty(
+      '--col-preview',
+      `${(sizes.preview / 100) * space}px`
+    );
   }
 
   applyPx();
@@ -94,7 +97,11 @@ export function initResizablePanes() {
       const delta = ev.clientX - startX;
       const upper = Math.min(total - MIN_PANE, maxA);
       const newA = Math.max(MIN_PANE, Math.min(upper, aPx + delta));
-      sizes = { ...sizes, [a]: (newA / space) * 100, [b]: ((total - newA) / space) * 100 };
+      sizes = {
+        ...sizes,
+        [a]: (newA / space) * 100,
+        [b]: ((total - newA) / space) * 100,
+      };
       applyPx();
     };
     const onUp = () => {

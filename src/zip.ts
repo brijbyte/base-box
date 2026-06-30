@@ -4,7 +4,8 @@ import type { FileMap } from './types';
 /** Zip the (all-text) project files and trigger a browser download of `<name>.zip`. */
 export function downloadZip(name: string, files: FileMap): void {
   const entries: Record<string, Uint8Array> = {};
-  for (const [path, content] of Object.entries(files)) entries[path] = strToU8(content);
+  for (const [path, content] of Object.entries(files))
+    entries[path] = strToU8(content);
 
   const blob = new Blob([zipSync(entries)], { type: 'application/zip' });
   const url = URL.createObjectURL(blob);

@@ -118,18 +118,13 @@ const stampOf = (p: string) => stamps.get(p) ?? 0;
 
 const isCssModule = (p: string) => p.endsWith('.module.css');
 
-/** Compile a CSS-module file to a JS module: scoped CSS injected + class-name map exported. */
-function getCssModule(path: string): string {
-  const src = fs.read(path) ?? '';
-  const cached = cssCache.get(path);
-  if (cached && cached.src === src) return cached.out;
-
-  let result;
+/** Run lightningcss, folding its `loc` into the message so the catch surfaces line/col. */
+function runCss(path: string, src: string, cssModules: boolean) {
   try {
-    result = transformCss({
+    return transformCss({
       filename: path,
       code: new TextEncoder().encode(src),
-      cssModules: true,
+      cssModules,
     });
   } catch (err) {
     // lightningcss carries the position on `loc`, not in `message` — fold it in so the
@@ -139,13 +134,33 @@ function getCssModule(path: string): string {
       err.message = `${err.message} (${loc.line}:${loc.column})`;
     throw err;
   }
-  const { code, exports } = result;
+}
+
+/** Compile a CSS-module file to a JS module: scoped CSS injected + class-name map exported. */
+function getCssModule(path: string): string {
+  const src = fs.read(path) ?? '';
+  const cached = cssCache.get(path);
+  if (cached && cached.src === src) return cached.out;
+
+  const { code, exports } = runCss(path, src, true);
   const css = new TextDecoder().decode(code);
   const tokens: Record<string, string> = {};
   for (const [orig, exp] of Object.entries(exports ?? {}))
     tokens[orig] = exp.name;
 
   const out = cssModuleToJs(path, css, tokens);
+  cssCache.set(path, { src, out });
+  return out;
+}
+
+/** Compile a plain `.css` file through lightningcss (nesting, etc.) — no scoping. */
+function getCss(path: string): string {
+  const src = fs.read(path) ?? '';
+  const cached = cssCache.get(path);
+  if (cached && cached.src === src) return cached.out;
+
+  const { code } = runCss(path, src, false);
+  const out = new TextDecoder().decode(code);
   cssCache.set(path, { src, out });
   return out;
 }
@@ -218,7 +233,10 @@ async function serveHtml(_path: string, html: string): Promise<Response> {
 }
 
 /** Broadcast a compile error to every preview window so the host shows the overlay. */
-async function broadcastCompileError(file: string, message: string): Promise<void> {
+async function broadcastCompileError(
+  file: string,
+  message: string
+): Promise<void> {
   const payload: PreviewErrorMessage = {
     source: PREVIEW_MSG,
     type: 'error',
@@ -387,11 +405,19 @@ async function serve(rawPath: string, destination = ''): Promise<Response> {
         headers: { 'Content-Type': MIME.js },
       });
     }
-    // Plain `.css` imported in a module graph (not via `<link rel=stylesheet>`):
-    // serve a side-effect JS module that injects the CSS. `<link>` requests
-    // (destination 'style') fall through to the generic `text/css` branch.
-    if (ext(path) === 'css' && destination !== 'style') {
-      return new Response(cssToJs(path, raw), {
+    // Plain `.css`: run through lightningcss like CSS modules (nesting, etc.). A
+    // `<link rel=stylesheet>` request (destination 'style') gets text/css; a module-graph
+    // `import './x.css'` gets a side-effect JS module that injects the compiled CSS.
+    if (ext(path) === 'css') {
+      await ensureCssReady();
+      const css = getCss(path);
+      errored.delete(path);
+      if (destination === 'style')
+        return new Response(css, {
+          status: 200,
+          headers: { 'Content-Type': MIME.css },
+        });
+      return new Response(cssToJs(path, css), {
         status: 200,
         headers: { 'Content-Type': MIME.js },
       });

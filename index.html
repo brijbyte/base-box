@@ -1,258 +1,395 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="light dark" />
-  <title>Base Box</title>
-  <!-- Anti-FOUC: apply a persisted theme override before first paint. -->
-  <script>
-    try {
-      var r = document.documentElement;
-      var t = localStorage.getItem('base-box-theme');
-      if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t);
-      var d = localStorage.getItem('base-box-dark-theme');
-      if (d) r.setAttribute('data-dark-theme', d);
-      var l = localStorage.getItem('base-box-light-theme');
-      if (l) r.setAttribute('data-light-theme', l);
-    } catch (e) { }
-  </script>
-  <!-- Anti-flash: hydrate stored pane sizes (percent → px) before first paint.
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Base Box</title>
+    <!-- Anti-FOUC: apply a persisted theme override before first paint. -->
+    <script>
+      try {
+        var r = document.documentElement;
+        var t = localStorage.getItem('base-box-theme');
+        if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t);
+        var d = localStorage.getItem('base-box-dark-theme');
+        if (d) r.setAttribute('data-dark-theme', d);
+        var l = localStorage.getItem('base-box-light-theme');
+        if (l) r.setAttribute('data-light-theme', l);
+      } catch (e) {}
+    </script>
+    <!-- Anti-flash: hydrate stored pane sizes (percent → px) before first paint.
        Defaults/key/gutter width must mirror src/resize.ts. -->
-  <script>
-    try {
-      var raw = localStorage.getItem('base-box-pane-sizes');
-      var s = raw ? JSON.parse(raw) : null;
-      if (!s || typeof s.sidebar !== 'number' || typeof s.editor !== 'number' || typeof s.preview !== 'number')
-        s = { sidebar: 18, editor: 41, preview: 41 };
-      var space = document.documentElement.clientWidth - 2; // minus the two 1px gutters
-      var sidebar = (s.sidebar / 100) * space, editor = (s.editor / 100) * space;
-      if (sidebar > 360) { editor += sidebar - 360; sidebar = 360; } // cap file-tree width
-      var rs = document.documentElement.style;
-      rs.setProperty('--col-sidebar', sidebar + 'px');
-      rs.setProperty('--col-editor', editor + 'px');
-      rs.setProperty('--col-preview', (s.preview / 100) * space + 'px');
-    } catch (e) { }
-  </script>
-  <link rel="stylesheet" href="/src/styles.css" />
-</head>
+    <script>
+      try {
+        var raw = localStorage.getItem('base-box-pane-sizes');
+        var s = raw ? JSON.parse(raw) : null;
+        if (
+          !s ||
+          typeof s.sidebar !== 'number' ||
+          typeof s.editor !== 'number' ||
+          typeof s.preview !== 'number'
+        )
+          s = { sidebar: 18, editor: 41, preview: 41 };
+        var space = document.documentElement.clientWidth - 2; // minus the two 1px gutters
+        var sidebar = (s.sidebar / 100) * space,
+          editor = (s.editor / 100) * space;
+        if (sidebar > 360) {
+          editor += sidebar - 360;
+          sidebar = 360;
+        } // cap file-tree width
+        var rs = document.documentElement.style;
+        rs.setProperty('--col-sidebar', sidebar + 'px');
+        rs.setProperty('--col-editor', editor + 'px');
+        rs.setProperty('--col-preview', (s.preview / 100) * space + 'px');
+      } catch (e) {}
+    </script>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
 
-<body>
-  <div id="app">
-    <div class="pane sidebar tree-loading">
-      <div class="bar tree-header">
-        <span class="tree-title">
-          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-icon lucide-file">
-            <path
-              d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z">
-            </path>
-            <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
-          </svg>
-          Files
-        </span>
-        <span class="tree-actions">
-          <button id="new" class="icon-btn" title="New File" aria-label="New File">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <path d="M14 2v6h6" />
-              <path d="M12 18v-6" />
-              <path d="M9 15h6" />
+  <body>
+    <div id="app">
+      <div class="pane sidebar tree-loading">
+        <div class="bar tree-header">
+          <span class="tree-title">
+            <svg
+              class="chevron"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-file-icon lucide-file"
+            >
+              <path
+                d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+              ></path>
+              <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
             </svg>
-          </button>
-          <button id="rename" class="icon-btn" title="Rename" aria-label="Rename selected">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.4 2.6a1 1 0 0 1 3 3l-9 9-3.5 1 1-3.5z" />
-            </svg>
-          </button>
-          <button id="delete" class="icon-btn" title="Delete" aria-label="Delete selected">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 6h18" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              <path d="M10 11v6M14 11v6" />
-            </svg>
-          </button>
-          <button id="download" class="icon-btn" title="Download all files as a ZIP"
-            aria-label="Download files as ZIP">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <path d="M7 10l5 5 5-5" />
-              <path d="M12 15V3" />
-            </svg>
-          </button>
-        </span>
-      </div>
-      <div id="tree"></div>
-      <div class="loading-overlay sk-tree" id="treeLoading" aria-hidden="true">
-        <div class="sk-row"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar"
-            style="width: 55%"></span></div>
-        <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar"
-            style="width: 45%"></span></div>
-        <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar"
-            style="width: 62%"></span></div>
-        <div class="sk-row"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar"
-            style="width: 40%"></span></div>
-        <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar"
-            style="width: 50%"></span></div>
-        <div class="sk-row indent"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar"
-            style="width: 38%"></span></div>
-        <div class="sk-row"><span class="skeleton sk-ico"></span><span class="skeleton sk-bar"
-            style="width: 48%"></span></div>
-      </div>
-    </div>
-    <div class="gutter" id="gutter1" role="separator" aria-orientation="vertical" aria-label="Resize file tree">
-      <span class="gutter-grip" aria-hidden="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="9" cy="6" r="1" />
-          <circle cx="9" cy="12" r="1" />
-          <circle cx="9" cy="18" r="1" />
-          <circle cx="15" cy="6" r="1" />
-          <circle cx="15" cy="12" r="1" />
-          <circle cx="15" cy="18" r="1" />
-        </svg>
-      </span>
-    </div>
-    <div class="pane editor">
-      <div class="bar"><span id="filename"></span></div>
-      <div id="editor"></div>
-      <div class="loading-overlay sk-editor" id="editorLoading" aria-hidden="true">
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 35%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 62%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 48%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 70%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 55%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 40%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 66%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 30%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 52%"></span></div>
-        <div class="sk-line"><span class="skeleton sk-num"></span><span class="skeleton sk-code"
-            style="width: 44%"></span></div>
-      </div>
-    </div>
-    <div class="gutter" id="gutter2" role="separator" aria-orientation="vertical" aria-label="Resize editor">
-      <span class="gutter-grip" aria-hidden="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="9" cy="6" r="1" />
-          <circle cx="9" cy="12" r="1" />
-          <circle cx="9" cy="18" r="1" />
-          <circle cx="15" cy="6" r="1" />
-          <circle cx="15" cy="12" r="1" />
-          <circle cx="15" cy="18" r="1" />
-        </svg>
-      </span>
-    </div>
-    <div class="pane">
-      <div class="bar preview-header">
-        <span id="previewTitle">Preview</span>
-        <button id="previewReload" class="icon-btn" title="Reload preview" aria-label="Reload preview">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-            <path d="M3 21v-5h5" />
-          </svg>
-        </button>
-      </div>
-      <div class="preview-body">
-        <iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe>
-        <div class="loading-overlay sk-preview" id="previewLoading">
-          <div class="sk-preview-body" aria-hidden="true">
-            <span class="skeleton sk-title" style="width: 45%"></span>
-            <span class="skeleton" style="width: 92%"></span>
-            <span class="skeleton" style="width: 80%"></span>
-            <span class="skeleton" style="width: 88%"></span>
-            <span class="skeleton" style="width: 70%"></span>
-            <span class="skeleton" style="width: 40%; height: 34px; margin-top: 8px"></span>
-          </div>
-          <span class="loading-label" id="previewLabel">Starting…</span>
-        </div>
-        <div class="error-overlay" id="previewError" hidden>
-          <div class="error-card">
-            <div class="error-head">
-              <span class="error-title" id="errorTitle"></span>
-              <button class="error-dismiss" id="errorDismiss" title="Dismiss" aria-label="Dismiss error">×</button>
-            </div>
-            <pre class="error-message" id="errorMessage"></pre>
-          </div>
-        </div>
-      </div>
-      <div class="console is-collapsed" id="console">
-        <div class="bar console-bar">
-          <button class="console-toggle" id="consoleToggle" title="Toggle console" aria-expanded="false">
-            <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-            <span class="console-title">Console</span>
-          </button>
-          <span class="console-filters" id="consoleFilters">
-            <button class="console-filter is-active" data-level="all">All</button>
-            <button class="console-filter" data-level="error">Errors<span class="console-count" data-count="error"></span></button>
-            <button class="console-filter" data-level="warn">Warnings<span class="console-count" data-count="warn"></span></button>
-            <button class="console-filter" data-level="info">Info</button>
-            <button class="console-filter" data-level="log">Logs</button>
-            <button class="console-filter" data-level="debug">Debug</button>
+            Files
           </span>
-          <button id="consoleClear" class="icon-btn console-clear" title="Clear console" aria-label="Clear console">
+          <span class="tree-actions">
+            <button
+              id="new"
+              class="icon-btn"
+              title="New File"
+              aria-label="New File"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                />
+                <path d="M14 2v6h6" />
+                <path d="M12 18v-6" />
+                <path d="M9 15h6" />
+              </svg>
+            </button>
+            <button
+              id="rename"
+              class="icon-btn"
+              title="Rename"
+              aria-label="Rename selected"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                />
+                <path d="M18.4 2.6a1 1 0 0 1 3 3l-9 9-3.5 1 1-3.5z" />
+              </svg>
+            </button>
+            <button
+              id="delete"
+              class="icon-btn"
+              title="Delete"
+              aria-label="Delete selected"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 6h18" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <path d="M10 11v6M14 11v6" />
+              </svg>
+            </button>
+            <button
+              id="download"
+              class="icon-btn"
+              title="Download all files as a ZIP"
+              aria-label="Download files as ZIP"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <path d="M7 10l5 5 5-5" />
+                <path d="M12 15V3" />
+              </svg>
+            </button>
+          </span>
+        </div>
+        <div id="tree"></div>
+        <div
+          class="loading-overlay sk-tree"
+          id="treeLoading"
+          aria-hidden="true"
+        >
+          <div class="sk-row">
+            <span class="skeleton sk-ico"></span
+            ><span class="skeleton sk-bar" style="width: 55%"></span>
+          </div>
+          <div class="sk-row indent">
+            <span class="skeleton sk-ico"></span
+            ><span class="skeleton sk-bar" style="width: 45%"></span>
+          </div>
+          <div class="sk-row indent">
+            <span class="skeleton sk-ico"></span
+            ><span class="skeleton sk-bar" style="width: 62%"></span>
+          </div>
+          <div class="sk-row">
+            <span class="skeleton sk-ico"></span
+            ><span class="skeleton sk-bar" style="width: 40%"></span>
+          </div>
+          <div class="sk-row indent">
+            <span class="skeleton sk-ico"></span
+            ><span class="skeleton sk-bar" style="width: 50%"></span>
+          </div>
+          <div class="sk-row indent">
+            <span class="skeleton sk-ico"></span
+            ><span class="skeleton sk-bar" style="width: 38%"></span>
+          </div>
+          <div class="sk-row">
+            <span class="skeleton sk-ico"></span
+            ><span class="skeleton sk-bar" style="width: 48%"></span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="gutter"
+        id="gutter1"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize file tree"
+      >
+        <span class="gutter-grip" aria-hidden="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="6" r="1" />
+            <circle cx="9" cy="12" r="1" />
+            <circle cx="9" cy="18" r="1" />
+            <circle cx="15" cy="6" r="1" />
+            <circle cx="15" cy="12" r="1" />
+            <circle cx="15" cy="18" r="1" />
+          </svg>
+        </span>
+      </div>
+      <div class="pane editor">
+        <div class="bar"><span id="filename"></span></div>
+        <div id="editor"></div>
+        <div
+          class="loading-overlay sk-editor"
+          id="editorLoading"
+          aria-hidden="true"
+        >
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 35%"></span>
+          </div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 62%"></span>
+          </div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 48%"></span>
+          </div>
+          <div class="sk-line"><span class="skeleton sk-num"></span></div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 70%"></span>
+          </div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 55%"></span>
+          </div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 40%"></span>
+          </div>
+          <div class="sk-line"><span class="skeleton sk-num"></span></div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 66%"></span>
+          </div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 30%"></span>
+          </div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 52%"></span>
+          </div>
+          <div class="sk-line">
+            <span class="skeleton sk-num"></span
+            ><span class="skeleton sk-code" style="width: 44%"></span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="gutter"
+        id="gutter2"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize editor"
+      >
+        <span class="gutter-grip" aria-hidden="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="6" r="1" />
+            <circle cx="9" cy="12" r="1" />
+            <circle cx="9" cy="18" r="1" />
+            <circle cx="15" cy="6" r="1" />
+            <circle cx="15" cy="12" r="1" />
+            <circle cx="15" cy="18" r="1" />
+          </svg>
+        </span>
+      </div>
+      <div class="pane">
+        <div class="bar preview-header">
+          <span id="previewTitle">Preview</span>
+          <button
+            id="previewReload"
+            class="icon-btn"
+            title="Reload preview"
+            aria-label="Reload preview"
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 6h18" />
-              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              <path d="M3 21v-5h5" />
             </svg>
           </button>
         </div>
-        <div class="console-log" id="consoleLog" data-filter="all"></div>
-      </div>
-    </div>
-    <footer id="statusbar">
-      <span id="status"></span>
-      <span class="status-info">
-        <span id="diagnostics" title="Errors and warnings"></span>
-        <span id="cursorPos" title="Line and column"></span>
-        <span id="indent" title="Indentation"></span>
-        <span id="language" title="Language mode"></span>
-      </span>
-      <div class="settings">
-        <button id="settings" class="icon-btn" title="Settings" aria-label="Settings" aria-haspopup="true"
-          aria-expanded="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </button>
-        <div id="settingsPanel" class="settings-panel" hidden>
-          <button id="share">Share URL</button>
-          <label class="setting-row">
-            <span>Mode</span>
-            <select id="mode" title="Light / dark mode">
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </label>
-          <label class="setting-row">
-            <span>Color theme</span>
-            <select id="colorTheme" title="Color theme for the current appearance"></select>
-          </label>
+        <div class="preview-body">
+          <iframe
+            id="preview"
+            sandbox="allow-scripts allow-same-origin"
+          ></iframe>
+          <div class="loading-overlay sk-preview" id="previewLoading">
+            <div class="sk-preview-body" aria-hidden="true">
+              <span class="skeleton sk-title" style="width: 45%"></span>
+              <span class="skeleton" style="width: 92%"></span>
+              <span class="skeleton" style="width: 80%"></span>
+              <span class="skeleton" style="width: 88%"></span>
+              <span class="skeleton" style="width: 70%"></span>
+              <span
+                class="skeleton"
+                style="width: 40%; height: 34px; margin-top: 8px"
+              ></span>
+            </div>
+            <span class="loading-label" id="previewLabel">Starting…</span>
+          </div>
+          <div class="error-overlay" id="previewError" hidden>
+            <div class="error-card">
+              <div class="error-head">
+                <span class="error-title" id="errorTitle"></span>
+                <button
+                  class="error-dismiss"
+                  id="errorDismiss"
+                  title="Dismiss"
+                  aria-label="Dismiss error"
+                >
+                  ×
+                </button>
+              </div>
+              <pre class="error-message" id="errorMessage"></pre>
+            </div>
+          </div>
+        </div>
+        <div class="console is-collapsed" id="console">
+          <div class="bar console-bar">
+            <button
+              class="console-toggle"
+              id="consoleToggle"
+              title="Toggle console"
+              aria-expanded="false"
+            >
+              <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+              <span class="console-title">Console</span>
+            </button>
+            <span class="console-filters" id="consoleFilters">
+              <button class="console-filter is-active" data-level="all">
+                All
+              </button>
+              <button class="console-filter" data-level="error">
+                Errors<span class="console-count" data-count="error"></span>
+              </button>
+              <button class="console-filter" data-level="warn">
+                Warnings<span class="console-count" data-count="warn"></span>
+              </button>
+              <button class="console-filter" data-level="info">Info</button>
+              <button class="console-filter" data-level="log">Logs</button>
+              <button class="console-filter" data-level="debug">Debug</button>
+            </span>
+            <button
+              id="consoleClear"
+              class="icon-btn console-clear"
+              title="Clear console"
+              aria-label="Clear console"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 6h18" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              </svg>
+            </button>
+          </div>
+          <div class="console-log" id="consoleLog" data-filter="all"></div>
         </div>
       </div>
-    </footer>
-  </div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
-
+      <footer id="statusbar">
+        <span id="status"></span>
+        <span class="status-info">
+          <span id="diagnostics" title="Errors and warnings"></span>
+          <span id="cursorPos" title="Line and column"></span>
+          <span id="indent" title="Indentation"></span>
+          <span id="language" title="Language mode"></span>
+        </span>
+        <div class="settings">
+          <button
+            id="settings"
+            class="icon-btn"
+            title="Settings"
+            aria-label="Settings"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+          <div id="settingsPanel" class="settings-panel" hidden>
+            <button id="share">Share URL</button>
+            <label class="setting-row">
+              <span>Mode</span>
+              <select id="mode" title="Light / dark mode">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+            <label class="setting-row">
+              <span>Color theme</span>
+              <select
+                id="colorTheme"
+                title="Color theme for the current appearance"
+              ></select>
+            </label>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

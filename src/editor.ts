@@ -23,7 +23,9 @@ const LANG_LABELS: Record<string, string> = {
   json: 'JSON',
 };
 const languageLabel = (path: string) =>
-  path ? (LANG_LABELS[ext(path)] ?? (ext(path).toUpperCase() || 'Plain Text')) : '';
+  path
+    ? (LANG_LABELS[ext(path)] ?? (ext(path).toUpperCase() || 'Plain Text'))
+    : '';
 
 /** Pick a CM6 language extension from a file path. Each lang package is loaded
  *  lazily on first open of its file type, so the initial bundle ships none of them. */

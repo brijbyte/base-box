@@ -10,8 +10,9 @@
 :root {
   color-scheme: light;
   /* Monospace stack mirroring VS Code's editor default (OS native first). */
-  --mono: ui-monospace, 'SF Mono', 'SFMono-Regular', 'Cascadia Code',
-    'Cascadia Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --mono:
+    ui-monospace, 'SF Mono', 'SFMono-Regular', 'Cascadia Code', 'Cascadia Mono',
+    Menlo, Consolas, 'Liberation Mono', monospace;
   /* chrome */
   --bg: #ffffff;
   --fg: #3b3b3b;
@@ -177,7 +178,9 @@ body {
   background: var(--bar-bg);
   border: 1px solid var(--border);
   color: var(--muted);
-  transition: color 0.1s, border-color 0.1s;
+  transition:
+    color 0.1s,
+    border-color 0.1s;
 }
 
 .gutter:hover .gutter-grip,
@@ -715,7 +718,14 @@ body {
   height: 30vh;
   min-height: 0;
   overflow-y: auto;
-  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-family: var(
+    --mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace
+  );
   font-size: 12px;
   line-height: 1.5;
 }
@@ -869,7 +879,6 @@ body {
   font-style: italic;
 }
 
-
 button,
 select {
   font: inherit;
@@ -889,4 +898,3 @@ button:focus-visible {
   outline: 1px solid var(--accent);
   outline-offset: 1px;
 }
-

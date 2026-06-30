@@ -4,7 +4,13 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'test-results', 'playwright-report', 'node_modules', 'stubs'],
+    ignores: [
+      'dist',
+      'test-results',
+      'playwright-report',
+      'node_modules',
+      'stubs',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

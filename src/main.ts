@@ -426,7 +426,10 @@ els.settings.addEventListener('click', (e) => {
   setSettingsOpen(!!els.settingsPanel.hidden);
 });
 document.addEventListener('click', (e) => {
-  if (!els.settingsPanel.hidden && !els.settings.parentElement!.contains(e.target as Node))
+  if (
+    !els.settingsPanel.hidden &&
+    !els.settings.parentElement!.contains(e.target as Node)
+  )
     setSettingsOpen(false);
 });
 document.addEventListener('keydown', (e) => {
