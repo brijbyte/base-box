@@ -4,6 +4,73 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 const SW_ENTRY = '/src/sw.ts';
 
+const injectShell = (html: string, shell: string) =>
+  html.replace('<div id="root"></div>', `<div id="root">${shell}</div>`);
+
+/**
+ * Compile `src/app/prerender.tsx` to an isolated SSR bundle (deliberately WITHOUT the
+ * browser node-polyfills, so `node:stream` etc. are the real Node modules) and return its
+ * `render()`. Used by both dev and build so the prerendered shell is identical.
+ */
+async function loadShellRenderer(): Promise<() => Promise<string>> {
+  const { resolve } = await import('node:path');
+  const { pathToFileURL } = await import('node:url');
+  const { build } = await import('vite');
+  const ssrDir = resolve('node_modules/.cache/base-box-ssr');
+  await build({
+    configFile: false,
+    logLevel: 'error',
+    plugins: [react()],
+    resolve: { tsconfigPaths: true },
+    build: {
+      ssr: resolve('src/app/prerender.tsx'),
+      outDir: ssrDir,
+      emptyOutDir: true,
+      minify: false,
+      write: true,
+      rollupOptions: { output: { entryFileNames: 'prerender.mjs' } },
+    },
+  });
+  const mod = await import(pathToFileURL(resolve(ssrDir, 'prerender.mjs')).href);
+  return mod.render;
+}
+
+/**
+ * Prerender the static app shell (panes, skeletons, status bar) into index.html's #root
+ * so the browser paints the shell before React hydrates it. Runs in both dev (request-time
+ * transform) and build (post-bundle), so the hydration path is exercised identically.
+ */
+function prerenderShell(): Plugin {
+  // Dev: compile the shell renderer once per server session and reuse it across requests.
+  let devRenderer: Promise<() => Promise<string>> | undefined;
+  return {
+    name: 'base-box-prerender',
+    enforce: 'post',
+    transformIndexHtml: {
+      order: 'post',
+      async handler(html, ctx) {
+        if (!ctx.server) return html; // build path is handled in closeBundle
+        devRenderer ??= loadShellRenderer();
+        return injectShell(html, await (await devRenderer)());
+      },
+    },
+    async closeBundle() {
+      const { readFileSync, writeFileSync, existsSync, rmSync } = await import(
+        'node:fs'
+      );
+      const { resolve } = await import('node:path');
+      const outFile = resolve('dist/index.html');
+      if (!existsSync(outFile)) return; // e.g. an SSR-only sub-build
+      const render = await loadShellRenderer();
+      writeFileSync(outFile, injectShell(readFileSync(outFile, 'utf8'), await render()));
+      rmSync(resolve('node_modules/.cache/base-box-ssr'), {
+        recursive: true,
+        force: true,
+      });
+    },
+  };
+}
+
 /**
  * Serves the Service Worker at root scope (`/sw.js`) during dev so it can
  * intercept `/__fs/*`. Transforms `src/sw.ts` through Vite (resolving its
@@ -37,6 +104,7 @@ export default defineConfig({
     react(),
     nodePolyfills({ globals: { Buffer: true, process: true } }),
     serviceWorkerDev(),
+    prerenderShell(),
   ],
   resolve: {
     tsconfigPaths: true,

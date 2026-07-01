@@ -17,31 +17,29 @@
         if (l) r.setAttribute('data-light-theme', l);
       } catch (e) {}
     </script>
-    <!-- Anti-flash: hydrate stored pane sizes (percent → px) before first paint.
-       Defaults/key/gutter width must mirror src/resize.ts. -->
+    <!-- Anti-flash: restore persisted pane sizes onto the prerendered panels before paint.
+       The layout is `{ panelId: percent }`; react-resizable-panels sizes a panel via
+       `flex: <percent> 1 0px`, so we set that (matching what hydration will compute). -->
     <script>
-      try {
-        var raw = localStorage.getItem('base-box-pane-sizes');
-        var s = raw ? JSON.parse(raw) : null;
-        if (
-          !s ||
-          typeof s.sidebar !== 'number' ||
-          typeof s.editor !== 'number' ||
-          typeof s.preview !== 'number'
-        )
-          s = { sidebar: 18, editor: 41, preview: 41 };
-        var space = document.documentElement.clientWidth - 2; // minus the two 1px gutters
-        var sidebar = (s.sidebar / 100) * space,
-          editor = (s.editor / 100) * space;
-        if (sidebar > 360) {
-          editor += sidebar - 360;
-          sidebar = 360;
-        } // cap file-tree width
-        var rs = document.documentElement.style;
-        rs.setProperty('--col-sidebar', sidebar + 'px');
-        rs.setProperty('--col-editor', editor + 'px');
-        rs.setProperty('--col-preview', (s.preview / 100) * space + 'px');
-      } catch (e) {}
+      (function () {
+        function restorePanes() {
+          try {
+            var raw = localStorage.getItem('base-box-panes');
+            if (!raw) return;
+            var layout = JSON.parse(raw);
+            for (var id in layout) {
+              var el = document.getElementById(id);
+              if (el && el.hasAttribute('data-panel'))
+                el.style.flex = layout[id] + ' 1 0px';
+            }
+          } catch (e) {}
+        }
+        // The panels are in the (prerendered) body, parsed after this head script — run
+        // once the DOM is ready, before the browser's first paint of #app.
+        if (document.readyState === 'loading')
+          document.addEventListener('DOMContentLoaded', restorePanes);
+        else restorePanes();
+      })();
     </script>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>

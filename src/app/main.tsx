@@ -5,7 +5,7 @@ import '@brijbyte/agentic-ui/tokens';
 import '@brijbyte/agentic-ui/reset';
 import './theme-bridge.css';
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { hydrateRoot } from 'react-dom/client';
 import { filesFromUrl } from '../codec';
 import { SAMPLE } from '../sample';
 import { Controller } from './controller';
@@ -16,8 +16,22 @@ import { App } from './App';
 const files = (await filesFromUrl()) ?? SAMPLE;
 const controller = new Controller(files);
 
-createRoot(document.getElementById('root')!).render(
+// The static shell is prerendered into #root at build time (see the prerender plugin);
+// hydrate it rather than replacing it, so the first paint is the shell, not a blank page.
+hydrateRoot(
+  document.getElementById('root')!,
   <StrictMode>
     <App controller={controller} />
-  </StrictMode>
+  </StrictMode>,
+  {
+    // The shell intentionally aborts the lazy panes' Suspense boundaries server-side, so
+    // React recovers those by client-rendering — expected, not a real error. Swallow that
+    // family (dev message text, and the minified #418–#425 hydration/Suspense codes); let
+    // anything else surface normally.
+    onRecoverableError(error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (/aborted|hydrat|Suspense|#4(1[89]|2[0-5])\b/i.test(msg)) return;
+      console.error(error);
+    },
+  }
 );

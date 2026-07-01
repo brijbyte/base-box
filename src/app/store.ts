@@ -13,5 +13,7 @@ export function useController(): Controller {
 
 export function useSnapshot(): Snapshot {
   const c = useController();
-  return useSyncExternalStore(c.subscribe, c.getSnapshot);
+  // Third arg = server snapshot (for the build-time prerender/hydration); getSnapshot is
+  // pure and returns the initial shell state on the server, so it doubles for both.
+  return useSyncExternalStore(c.subscribe, c.getSnapshot, c.getSnapshot);
 }
