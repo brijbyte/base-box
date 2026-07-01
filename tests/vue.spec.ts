@@ -83,7 +83,9 @@ test('template picker loads the Vue starter and it renders', async ({
   });
 
   await page.locator('#settings').click();
-  await page.locator('#template').selectOption('vue');
+  // Open the "New project" template Select (agentic-ui) and pick Vue 3.
+  await page.getByText('Template…').click();
+  await page.getByRole('option', { name: 'Vue 3' }).click();
 
   // FS swapped to the Vue starter: App.vue appears in the tree and the SFC renders.
   await expect(page.getByRole('treeitem', { name: 'App.vue' })).toBeVisible({

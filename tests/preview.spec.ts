@@ -164,28 +164,25 @@ test('caches esbuild.wasm in Cache Storage', async ({ page }) => {
   expect(cachedCount).toBeGreaterThan(0);
 });
 
-test('mode select defaults to system and applies + persists', async ({
-  page,
-}) => {
+test('mode radios default to system and apply + persist', async ({ page }) => {
   await page.goto('/');
   const html = page.locator('html');
   await page.locator('#settings').click();
-  const mode = page.locator('#mode');
 
   // Default: system → no explicit override, CSS prefers-color-scheme decides.
-  await expect(mode).toHaveValue('system');
+  await expect(page.getByRole('radio', { name: 'System' })).toBeChecked();
   await expect(html).not.toHaveAttribute('data-theme', /.*/);
 
-  await mode.selectOption('light');
+  await page.getByRole('radio', { name: 'Light' }).click();
   await expect(html).toHaveAttribute('data-theme', 'light');
 
-  await mode.selectOption('dark');
+  await page.getByRole('radio', { name: 'Dark' }).click();
   await expect(html).toHaveAttribute('data-theme', 'dark');
 
   // Persists across reload (anti-FOUC script + initTheme restore it).
   await page.reload();
   await page.locator('#settings').click();
-  await expect(page.locator('#mode')).toHaveValue('dark');
+  await expect(page.getByRole('radio', { name: 'Dark' })).toBeChecked();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 

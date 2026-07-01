@@ -67,6 +67,8 @@ export interface Editor {
   setFile(path: string, content: string): void;
   getContent(): string;
   focus(): void;
+  /** Tear down the CodeMirror view (for React StrictMode remounts / unmount). */
+  destroy(): void;
 }
 
 /** Live editor state shown in the status bar. */
@@ -172,5 +174,6 @@ export function createEditor(
     },
     getContent: () => view.state.doc.toString(),
     focus: () => view.focus(),
+    destroy: () => view.destroy(),
   };
 }

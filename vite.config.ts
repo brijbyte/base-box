@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
+import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 const SW_ENTRY = '/src/sw.ts';
@@ -33,9 +34,13 @@ function serviceWorkerDev(): Plugin {
 export default defineConfig({
   // nodePolyfills shims buffer/process/path/events etc. that memfs needs in the browser.
   plugins: [
+    react(),
     nodePolyfills({ globals: { Buffer: true, process: true } }),
     serviceWorkerDev(),
   ],
+  resolve: {
+    tsconfigPaths: true,
+  },
   build: {
     // es2022 enables top-level await (main.ts boots via `await filesFromUrl()`);
     // consistent with the Safari 16.4+ floor already required for import maps (§6).

@@ -1,0 +1,54 @@
+/*
+  Token bridge: agentic-ui defines its semantic tokens in `@layer theme` (the
+  lowest-priority layer), so this UNLAYERED :root block overrides their VALUES —
+  no !important needed. We point them at the app's existing VS Code / CodeMirror
+  palette variables (defined in styles.css, which flip on data-theme + the color
+  themes). Because these are var() references, every agentic-ui component
+  re-themes automatically whenever the app's mode / color theme changes.
+*/
+:root {
+  /* Surfaces */
+  --color-canvas: var(--bg);
+  --color-elevated: var(--bar-bg);
+  --color-sunken: var(--sidebar-bg);
+  --color-overlay: var(--bar-bg);
+  --color-sidebar: var(--sidebar-bg);
+  --color-surface-1: var(--control-bg);
+  --color-surface-2: var(--bar-bg);
+  --color-surface-3: var(--sidebar-bg);
+  --color-hover: var(--hover-bg);
+  --color-active: var(--hover-bg);
+  --color-selected: var(--selected-bg);
+
+  /* Text */
+  --color-primary: var(--fg);
+  --color-secondary: var(--muted);
+  --color-tertiary: var(--muted);
+  --color-code: var(--fg);
+  --color-on-accent: #ffffff;
+  --color-inverse: var(--bg);
+
+  /* Lines */
+  --color-line: var(--border);
+  --color-line-strong: var(--border);
+  --color-line-subtle: var(--border);
+
+  /* Accent */
+  --color-accent: var(--accent);
+  --color-accent-solid: var(--accent);
+  --color-accent-text: var(--accent);
+  --color-accent-hover: var(--accent);
+  --color-accent-pressed: var(--accent);
+  --color-accent-tint: var(--selected-bg);
+  --color-accent-tint-hover: var(--hover-bg);
+  --color-focus-ring: var(--accent);
+
+  /* Chrome uses the same VS Code monospace stack as the editor. */
+  --font-mono: var(--mono);
+  --font-base: var(--mono);
+
+  /* The only dropdowns in the app (the template + color-theme Selects) live inside
+     the settings Popover, so they must stack ABOVE it (default --z-dropdown 100 sits
+     below --z-popover 500). */
+  --z-dropdown: 550;
+}

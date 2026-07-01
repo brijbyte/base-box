@@ -134,6 +134,9 @@ html,
 body {
   margin: 0;
   height: 100%;
+  /* Full-screen app shell: the page itself never scrolls — each pane scrolls its
+     own content, and the status bar stays pinned. */
+  overflow: hidden;
   font: 14px/1.4 var(--mono);
   background: var(--bg);
   color: var(--fg);
@@ -141,6 +144,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* React mounts here; fill the viewport so #app's height:100% resolves and the
+   status bar stays pinned at the bottom (panes scroll their own content). */
+#root {
+  height: 100%;
 }
 
 #app {
@@ -879,22 +888,50 @@ body {
   font-style: italic;
 }
 
-button,
-select {
-  font: inherit;
-  background: var(--control-bg);
-  color: var(--control-fg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 8px;
-  cursor: pointer;
+/* --- agentic-ui chrome integration --- */
+/* Compact icon buttons (agentic ghost Buttons) used across the bars/toolbar. */
+.tool-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  padding: 0;
 }
 
-button:hover {
-  border-color: var(--accent);
+/* The gear lives in the status bar, so it inherits the bar's foreground color. */
+#statusbar .settings .tool-btn {
+  color: inherit;
 }
 
-button:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: 1px;
+/* Select dropdown highlight: agentic-ui fills the highlighted item with --color-accent
+   and white text, but some color themes use a LIGHT --accent (e.g. Night Owl), so
+   white-on-accent fails contrast. Use a neutral tint + primary text (VS Code-style) so
+   the label stays legible under every theme; keep the checkmark in the accent color.
+   Unlayered rules beat agentic-ui's @layer components regardless of specificity. */
+[role='option']:hover,
+[role='option'][data-highlighted],
+[role='option'][data-selected] {
+  background-color: var(--selected-bg);
+  color: var(--fg);
+}
+
+[role='option'] svg,
+[role='option'][data-highlighted] svg {
+  color: var(--accent);
+}
+
+/* Settings popover body: a stacked column of labeled control rows. */
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 200px;
+}
+
+.settings-content .setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--fg);
 }

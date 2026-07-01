@@ -16,6 +16,8 @@ export interface FileTreePanel {
   startCreate(): void;
   select(path: string): void;
   selected(): string | null;
+  /** Tear down the tree DOM (for React StrictMode remounts / unmount). */
+  destroy(): void;
 }
 
 /**
@@ -90,5 +92,6 @@ export function createFileTree(
       tree.getItem(p)?.select();
     },
     selected: () => tree.getSelectedPaths()[0] ?? tree.getFocusedPath(),
+    destroy: () => mount.replaceChildren(),
   };
 }

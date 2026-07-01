@@ -36,8 +36,9 @@ function save(s: Sizes) {
   }
 }
 
-/** Wire up the two gutters; hydrate stored percentages into pixel column widths. */
-export function initResizablePanes() {
+/** Wire up the two gutters; hydrate stored percentages into pixel column widths.
+ *  Returns a disposer that removes the listeners (for React effect cleanup). */
+export function initResizablePanes(): () => void {
   const app = document.querySelector<HTMLDivElement>('#app')!;
   const gutter1 = document.querySelector<HTMLDivElement>('#gutter1')!;
   const gutter2 = document.querySelector<HTMLDivElement>('#gutter2')!;
@@ -118,10 +119,16 @@ export function initResizablePanes() {
     gutter.addEventListener('pointercancel', onUp);
   }
 
-  gutter1.addEventListener('pointerdown', (e) =>
-    startDrag(gutter1, 'sidebar', 'editor', e, MAX_SIDEBAR)
-  );
-  gutter2.addEventListener('pointerdown', (e) =>
-    startDrag(gutter2, 'editor', 'preview', e)
-  );
+  const onDown1 = (e: PointerEvent) =>
+    startDrag(gutter1, 'sidebar', 'editor', e, MAX_SIDEBAR);
+  const onDown2 = (e: PointerEvent) =>
+    startDrag(gutter2, 'editor', 'preview', e);
+  gutter1.addEventListener('pointerdown', onDown1);
+  gutter2.addEventListener('pointerdown', onDown2);
+
+  return () => {
+    window.removeEventListener('resize', applyPx);
+    gutter1.removeEventListener('pointerdown', onDown1);
+    gutter2.removeEventListener('pointerdown', onDown2);
+  };
 }
