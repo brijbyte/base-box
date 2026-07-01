@@ -1,8 +1,10 @@
-import { FileTree, type FileTreeMutationSemanticEvent } from '@pierre/trees';
+import type {
+  FileTree as FileTreeModel,
+  FileTreeOptions,
+  FileTreeMutationSemanticEvent,
+} from '@pierre/trees';
 
 export interface FileTreeHandlers {
-  /** A file (not a directory) was selected/opened. */
-  onOpen: (path: string) => void;
   onAdd: (path: string) => void;
   onRemove: (path: string, recursive: boolean) => void;
   onMove: (from: string, to: string) => void;
@@ -16,47 +18,67 @@ export interface FileTreePanel {
   startCreate(): void;
   select(path: string): void;
   selected(): string | null;
-  /** Tear down the tree DOM (for React StrictMode remounts / unmount). */
+  /** Swap the whole path set (project load) and reselect. */
+  resetPaths(paths: string[], selected: string | null): void;
+  /** Detach the mutation listener (React effect cleanup). */
   destroy(): void;
 }
 
-/**
- * Wraps @pierre/trees (vanilla). The tree is the source of truth for the path
- * set; structural edits (add/remove/move via toolbar, inline rename, drag&drop)
- * emit mutations that the caller mirrors into the in-memory FS.
- */
-export function createFileTree(
-  mount: HTMLElement,
+/** Every directory prefix of `paths`, so a reset re-opens the tree like `initialExpansion: 'open'`. */
+function directoryPaths(paths: string[]): string[] {
+  const dirs = new Set<string>();
+  for (const p of paths) {
+    let i = p.indexOf('/');
+    while (i !== -1) {
+      dirs.add(p.slice(0, i));
+      i = p.indexOf('/', i + 1);
+    }
+  }
+  return [...dirs];
+}
+
+/** Options for `useFileTree()`. Selection → open is handled in the React view via `useFileTreeSelection`. */
+export function fileTreeOptions(
   paths: string[],
-  initialSelected: string | null,
-  handlers: FileTreeHandlers
-): FileTreePanel {
-  const tree = new FileTree({
+  initialSelected: string | null
+): FileTreeOptions {
+  return {
     paths,
     initialExpansion: 'open',
     initialSelectedPaths: initialSelected ? [initialSelected] : [],
     renaming: true,
     dragAndDrop: true,
-    onSelectionChange: (selected) => {
-      const path = selected[0];
-      if (path && tree.getItem(path)?.isDirectory() === false) {
-        handlers.onOpen(path);
-      }
-    },
-  });
+  };
+}
 
+/**
+ * Wraps a React-owned `@pierre/trees` model in the imperative surface the controller
+ * drives (toolbar add/rename/remove, project reset). The tree is the source of truth
+ * for the path set; structural edits (toolbar, inline rename, drag&drop) emit mutations
+ * that the caller mirrors into the in-memory FS.
+ */
+export function attachTreePanel(
+  tree: FileTreeModel,
+  handlers: FileTreeHandlers
+): FileTreePanel {
   const applySemantic = (e: FileTreeMutationSemanticEvent) => {
     if (e.operation === 'add') handlers.onAdd(e.path);
     else if (e.operation === 'remove') handlers.onRemove(e.path, e.recursive);
     else if (e.operation === 'move') handlers.onMove(e.from, e.to);
     // 'reset' is driven by us; ignore.
   };
-  tree.onMutation('*', (event) => {
+  const off = tree.onMutation('*', (event) => {
     if (event.operation === 'batch') event.events.forEach(applySemantic);
     else applySemantic(event);
   });
 
-  tree.render({ containerWrapper: mount });
+  const select = (p: string) => {
+    // Exclusive selection: item.select() otherwise adds to the set.
+    for (const s of tree.getSelectedPaths()) {
+      if (s !== p) tree.getItem(s)?.deselect();
+    }
+    tree.getItem(p)?.select();
+  };
 
   return {
     add: (p) => tree.add(p),
@@ -84,14 +106,12 @@ export function createFileTree(
       tree.add(path);
       tree.startRenaming(path, { removeIfCanceled: true });
     },
-    select: (p) => {
-      // Exclusive selection: programmatic select() otherwise adds to the set.
-      for (const s of tree.getSelectedPaths()) {
-        if (s !== p) tree.getItem(s)?.deselect();
-      }
-      tree.getItem(p)?.select();
-    },
+    select,
     selected: () => tree.getSelectedPaths()[0] ?? tree.getFocusedPath(),
-    destroy: () => mount.replaceChildren(),
+    resetPaths: (paths, selected) => {
+      tree.resetPaths(paths, { initialExpandedPaths: directoryPaths(paths) });
+      if (selected) select(selected);
+    },
+    destroy: off,
   };
 }

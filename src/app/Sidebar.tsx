@@ -1,16 +1,20 @@
+import { Suspense } from 'react';
 import { FilePlus, SquarePen, Trash2, Download, File } from 'lucide-react';
 import { Toolbar, IconButton } from '@ui';
 import { useController, useSnapshot } from './store';
-import { useMount } from './useMount';
 import { TreeSkeleton } from './Skeletons';
+import { lazyShell } from './lazyShell';
+
+// The tree pulls in the @pierre/trees bundle; load it lazily. The TreeSkeleton below
+// (gated on `treeReady`) already covers both the chunk-load and mount phases.
+const FileTreeView = lazyShell(() => import('./FileTreeView'));
 
 export function Sidebar() {
   const c = useController();
-  const { booted } = useSnapshot();
-  const treeRef = useMount((el) => c.mountTree(el));
+  const { treeReady } = useSnapshot();
 
   return (
-    <div className={`pane sidebar${booted ? '' : ' tree-loading'}`}>
+    <div className={`pane sidebar${treeReady ? '' : ' tree-loading'}`}>
       <div className="bar tree-header">
         <span className="tree-title">
           <File className="chevron" size={16} aria-hidden />
@@ -71,8 +75,10 @@ export function Sidebar() {
           />
         </Toolbar.Root>
       </div>
-      <div id="tree" ref={treeRef} />
-      <TreeSkeleton hidden={booted} />
+      <Suspense fallback={null}>
+        <FileTreeView />
+      </Suspense>
+      <TreeSkeleton hidden={treeReady} />
     </div>
   );
 }

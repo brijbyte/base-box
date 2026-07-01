@@ -35,8 +35,16 @@ import {
   onPreviewConsole,
   type ConsoleLevel,
 } from '../messages';
-import { createEditor, type Editor, type EditorStatus } from '../editor';
-import { createFileTree, type FileTreePanel } from '../filetree';
+// Type-only: the CodeMirror bundle is loaded lazily by <EditorPane>, which injects
+// `createEditor` into `mountEditor` — so importing it here would defeat the code-split.
+import type { Editor, EditorStatus } from '../editor';
+type CreateEditor = typeof import('../editor')['createEditor'];
+import {
+  fileTreeOptions,
+  attachTreePanel,
+  type FileTreePanel,
+} from '../filetree';
+import type { FileTree as FileTreeModel } from '@pierre/trees';
 import type { LspClient } from '../lsp/bridge'; // type-only: no runtime import
 
 /** The reactive slice React renders from (via useSyncExternalStore). */
@@ -44,8 +52,11 @@ export interface Snapshot {
   status: string;
   editorStatus: EditorStatus | null;
   filename: string;
-  /** Skeleton overlays hide once the tree/editor are first mounted + opened. */
-  booted: boolean;
+  /** Each pane's skeleton hides on its own readiness, so panes flow in individually:
+   *  the tree when its model is rendered, the editor when the first file is opened
+   *  (the preview reveals separately, on the iframe `load` — see `preview.visible`). */
+  treeReady: boolean;
+  editorReady: boolean;
   previewTitle: string;
   /** Preview loading overlay: shown/hidden, its label, and error styling. */
   preview: { visible: boolean; label: string; error: boolean };
@@ -87,7 +98,6 @@ export class Controller {
   private current = '';
   private editor: Editor | null = null;
   private panel: FileTreePanel | null = null;
-  private treeMount: HTMLElement | null = null;
   private iframe: HTMLIFrameElement | null = null;
   private consoleLog: HTMLElement | null = null;
 
@@ -135,7 +145,8 @@ export class Controller {
       status: '',
       editorStatus: null,
       filename: this.current || '(no file)',
-      booted: false,
+      treeReady: false,
+      editorReady: false,
       previewTitle: 'Preview',
       preview: { visible: true, label: 'Starting…', error: false },
       previewError: null,
@@ -198,7 +209,7 @@ export class Controller {
   }
 
   // ── Mount points (called from React layout effects) ───────────────────────
-  mountEditor(el: HTMLElement): () => void {
+  mountEditor(el: HTMLElement, createEditor: CreateEditor): () => void {
     const editor = createEditor(
       el,
       (value) => {
@@ -226,29 +237,32 @@ export class Controller {
     // Re-apply the current file so a StrictMode remount restores content.
     if (this.current)
       editor.setFile(this.current, this.fs.read(this.current) ?? '');
+    // Editor is ready with its first file: reveal it (skeleton painted for a frame first).
+    this.setState({ editorReady: true });
     return () => {
       editor.destroy();
       if (this.editor === editor) this.editor = null;
     };
   }
 
-  mountTree(el: HTMLElement): () => void {
-    this.treeMount = el;
-    this.panel = this.createTree(el, this.current);
-    return () => {
-      this.panel?.destroy();
-      this.panel = null;
-      if (this.treeMount === el) this.treeMount = null;
-    };
+  /** The initial options for the React `useFileTree()` hook (read once at model creation). */
+  treeOptions() {
+    return fileTreeOptions(this.fs.list(), this.current || null);
   }
 
-  private createTree(el: HTMLElement, selected: string): FileTreePanel {
-    return createFileTree(el, this.fs.list(), selected || null, {
-      onOpen: (p) => this.openFile(p),
+  /** Borrow the React-owned tree model for toolbar actions + project loads. */
+  registerTree(model: FileTreeModel): () => void {
+    this.panel = attachTreePanel(model, {
       onAdd: (p) => this.onAdd(p),
       onRemove: (p) => this.onRemove(p),
       onMove: (from, to) => this.onMove(from, to),
     });
+    // Tree is rendered with its files: reveal it independently of the editor/preview.
+    this.setState({ treeReady: true });
+    return () => {
+      this.panel?.destroy();
+      this.panel = null;
+    };
   }
 
   attachIframe(el: HTMLIFrameElement): () => void {
@@ -271,8 +285,9 @@ export class Controller {
   }
 
   // ── One-shot boot (guarded by the caller via a ref) ───────────────────────
+  // The tree/editor reveal on their own mounts (mountEditor/registerTree); boot only
+  // drives the preview, whose skeleton stays until the compiled app loads in the iframe.
   async boot() {
-    this.setState({ booted: true });
     this.setPreviewLabel('Starting service worker…');
     this.setStatus('registering service worker…');
     await registerServiceWorker();
@@ -291,8 +306,9 @@ export class Controller {
   }
 
   focusCurrent(path: string) {
-    // Called by the tree's selection; keep editor + panel in sync.
-    this.openFile(path);
+    // Called by the tree's selection; keep editor + panel in sync. Ignore re-selects
+    // of the already-open file (the selection effect can re-fire on re-render).
+    if (path !== this.current) this.openFile(path);
   }
 
   private syncUrlFile(path: string) {
@@ -427,11 +443,8 @@ export class Controller {
     for (const f of this.fs.list()) this.fs.delete(f);
     for (const [p, c] of Object.entries(files)) this.fs.write(p, c);
     this.current = this.fs.has('index.html') ? 'index.html' : this.firstFile();
-    // Tear down the old tree DOM before re-mounting (createFileTree appends).
-    if (this.treeMount) {
-      this.treeMount.replaceChildren();
-      this.panel = this.createTree(this.treeMount, this.current);
-    }
+    // Swap the whole path set in place — the React model persists across loads.
+    this.panel?.resetPaths(this.fs.list(), this.current || null);
     this.openFile(this.current);
     const url = new URL(location.href);
     url.searchParams.delete('files');

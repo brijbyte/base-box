@@ -1,11 +1,14 @@
+import { createEditor } from '../editor';
 import { useController, useSnapshot } from './store';
 import { useMount } from './useMount';
 import { EditorSkeleton } from './Skeletons';
 
+// This module pulls in the CodeMirror bundle; it's lazy-loaded (see App.tsx) so that
+// weight stays out of the initial chunk. `createEditor` is injected into the controller.
 export function EditorPane() {
   const c = useController();
-  const { filename, booted } = useSnapshot();
-  const editorRef = useMount((el) => c.mountEditor(el));
+  const { filename, editorReady } = useSnapshot();
+  const editorRef = useMount((el) => c.mountEditor(el, createEditor));
 
   return (
     <div className="pane editor">
@@ -13,7 +16,9 @@ export function EditorPane() {
         <span id="filename">{filename}</span>
       </div>
       <div id="editor" ref={editorRef} />
-      <EditorSkeleton hidden={booted} />
+      <EditorSkeleton hidden={editorReady} />
     </div>
   );
 }
+
+export default EditorPane;

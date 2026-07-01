@@ -53,6 +53,19 @@ export function EditorSkeleton({ hidden }: { hidden: boolean }) {
   );
 }
 
+/** Suspense fallback for the lazy <EditorPane>: the pane shell + skeleton, shown while
+ *  the CodeMirror chunk loads (before the real pane's own mount skeleton takes over). */
+export function EditorPaneFallback() {
+  return (
+    <div className="pane editor">
+      <div className="bar">
+        <span id="filename" />
+      </div>
+      <EditorSkeleton hidden={false} />
+    </div>
+  );
+}
+
 export function PreviewSkeleton({
   visible,
   label,

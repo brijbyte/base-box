@@ -153,22 +153,34 @@ body {
 }
 
 #app {
+  /* Rows: the resizable pane group (react-resizable-panels) over a pinned status bar. */
   display: grid;
-  /* Pane widths are driven by JS (px, hydrated from stored percentages); the gutters
-     are fixed drag handles. Fallbacks apply before the resize module runs. */
-  grid-template-columns:
-    var(--col-sidebar, 220px) var(--gutter-w) var(--col-editor, 1fr)
-    var(--gutter-w) var(--col-preview, 1fr);
   grid-template-rows: 1fr auto;
-  --gutter-w: 1px;
   height: 100%;
 }
 
-/* 1px column separators that double as drag handles. The thin line keeps the
-   original divider look; a centered grip widens the actual grab target. */
+/* The horizontal Panel group fills the top row; its children scroll their own content. */
+.panes {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Panel content host: let the wrapped `.pane` fill the panel (the library sizes the panel). */
+.pane-host {
+  display: flex;
+  flex-direction: column;
+}
+.pane-host > .pane {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 1px separators that double as drag handles. The thin line keeps the original
+   divider look; a centered grip widens the visible grab target (the library
+   expands the actual pointer hit area for the thin bar). */
 .gutter {
   position: relative;
-  cursor: col-resize;
+  width: 1px;
   background: var(--border);
 }
 
@@ -193,7 +205,8 @@ body {
 }
 
 .gutter:hover .gutter-grip,
-.gutter.is-dragging .gutter-grip {
+.gutter:focus-visible .gutter-grip,
+.gutter:active .gutter-grip {
   color: var(--accent);
   border-color: var(--accent);
 }
@@ -254,7 +267,6 @@ body {
 /* Bottom status bar: spans all columns, fixed height. Message on the left,
    editor info (cursor / indent / language / diagnostics) on the right. */
 #statusbar {
-  grid-column: 1 / -1;
   height: 22px;
   display: flex;
   align-items: center;
