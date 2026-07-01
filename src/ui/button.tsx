@@ -4,6 +4,7 @@ import { forwardRef } from 'react';
 import { Button, type ButtonProps } from '@brijbyte/agentic-ui/button';
 import type { LucideIcon } from 'lucide-react';
 import '@brijbyte/agentic-ui/button.css';
+import styles from './button.module.css';
 
 export { Button };
 export type { ButtonProps };
@@ -23,7 +24,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   ) {
     return (
       <Button ref={ref} iconOnly={iconOnly ?? !children} {...props}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span className={styles.buttonIconWrapper}>
           <Icon size={iconSize} aria-hidden />
           {children}
         </span>

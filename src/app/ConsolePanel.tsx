@@ -5,6 +5,7 @@ import { useController, useSnapshot } from './store';
 import styles from './ConsolePanel.module.css';
 
 type Filter = 'all' | 'error' | 'warn' | 'info' | 'log' | 'debug';
+
 const FILTERS: { level: Filter; label: string }[] = [
   { level: 'all', label: 'All' },
   { level: 'error', label: 'Errors' },

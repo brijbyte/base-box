@@ -6,3 +6,4 @@ export {
   type RadioGroupProps,
   type RadioOption,
 } from '@brijbyte/agentic-ui/radio-group';
+export { Radio } from '@brijbyte/agentic-ui/radio';
