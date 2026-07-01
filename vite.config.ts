@@ -4,6 +4,16 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 const SW_ENTRY = '/src/sw.ts';
 
+// Shared CSS-module config. The SSR shell (loadShellRenderer) is a SEPARATE Vite build from
+// the client, so both must hash class names identically or hydration mismatches. Pinning
+// generateScopedName guarantees the prerendered shell and the client agree.
+const cssModules = {
+  modules: {
+    localsConvention: 'camelCase' as const,
+    generateScopedName: '[name]_[local]_[hash:base64:6]',
+  },
+};
+
 const injectShell = (html: string, shell: string) =>
   html.replace('<div id="root"></div>', `<div id="root">${shell}</div>`);
 
@@ -22,6 +32,7 @@ async function loadShellRenderer(): Promise<() => Promise<string>> {
     logLevel: 'error',
     plugins: [react()],
     resolve: { tsconfigPaths: true },
+    css: cssModules,
     build: {
       ssr: resolve('src/app/prerender.tsx'),
       outDir: ssrDir,
@@ -31,7 +42,9 @@ async function loadShellRenderer(): Promise<() => Promise<string>> {
       rollupOptions: { output: { entryFileNames: 'prerender.mjs' } },
     },
   });
-  const mod = await import(pathToFileURL(resolve(ssrDir, 'prerender.mjs')).href);
+  const mod = await import(
+    pathToFileURL(resolve(ssrDir, 'prerender.mjs')).href
+  );
   return mod.render;
 }
 
@@ -55,14 +68,16 @@ function prerenderShell(): Plugin {
       },
     },
     async closeBundle() {
-      const { readFileSync, writeFileSync, existsSync, rmSync } = await import(
-        'node:fs'
-      );
+      const { readFileSync, writeFileSync, existsSync, rmSync } =
+        await import('node:fs');
       const { resolve } = await import('node:path');
       const outFile = resolve('dist/index.html');
       if (!existsSync(outFile)) return; // e.g. an SSR-only sub-build
       const render = await loadShellRenderer();
-      writeFileSync(outFile, injectShell(readFileSync(outFile, 'utf8'), await render()));
+      writeFileSync(
+        outFile,
+        injectShell(readFileSync(outFile, 'utf8'), await render())
+      );
       rmSync(resolve('node_modules/.cache/base-box-ssr'), {
         recursive: true,
         force: true,
@@ -109,6 +124,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  css: cssModules,
   build: {
     // es2022 enables top-level await (main.ts boots via `await filesFromUrl()`);
     // consistent with the Safari 16.4+ floor already required for import maps (§6).

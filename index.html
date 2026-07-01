@@ -17,31 +17,26 @@
         if (l) r.setAttribute('data-light-theme', l);
       } catch (e) {}
     </script>
-    <!-- Anti-flash: restore persisted pane sizes onto the prerendered panels before paint.
-       The layout is `{ panelId: percent }`; react-resizable-panels sizes a panel via
-       `flex: <percent> 1 0px`, so we set that (matching what hydration will compute). -->
+    <!-- Anti-flash: restore persisted pane sizes before the body is even parsed. The layout
+       is `{ panelId: percent }`. We expose each as a `--fg-<id>` CSS var on <html> now (this
+       runs during head parse, before the panels exist); styles.css consumes them so the very
+       first paint already has the restored sizes, matching what hydration computes — no shift.
+       See the `#pane-*` rules in styles.css for how they're applied. -->
     <script>
       (function () {
-        function restorePanes() {
-          try {
-            var raw = localStorage.getItem('base-box-panes');
-            if (!raw) return;
-            var layout = JSON.parse(raw);
-            for (var id in layout) {
-              var el = document.getElementById(id);
-              if (el && el.hasAttribute('data-panel'))
-                el.style.flex = layout[id] + ' 1 0px';
-            }
-          } catch (e) {}
-        }
-        // The panels are in the (prerendered) body, parsed after this head script — run
-        // once the DOM is ready, before the browser's first paint of #app.
-        if (document.readyState === 'loading')
-          document.addEventListener('DOMContentLoaded', restorePanes);
-        else restorePanes();
+        try {
+          var raw = localStorage.getItem('base-box-panes');
+          if (!raw) return;
+          var layout = JSON.parse(raw);
+          var r = document.documentElement;
+          for (var id in layout) {
+            if (!/^[a-zA-Z][\w-]*$/.test(id)) continue; // guard the var name
+            r.style.setProperty('--fg-' + id, String(Number(layout[id])));
+          }
+        } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/global.css" />
   </head>
 
   <body>

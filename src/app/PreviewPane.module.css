@@ -1,0 +1,103 @@
+/* Preview pane chrome + error overlay. Root `.pane` and `.loading-overlay` are global; the
+   #preview / #previewError etc. ids stay on their elements (tests/refs) with box styling here. */
+
+/* Preview pane header: title left, reload button right (revealed on hover). */
+.preview-header {
+  justify-content: space-between;
+  padding: 0 6px 0 10px;
+}
+
+.preview-header .preview-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-header .preview-reload {
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+:global(.pane):hover .preview-header .preview-reload,
+:global(.pane):focus-within .preview-header .preview-reload {
+  opacity: 1;
+}
+
+/* Holds the iframe + its overlays; the console panel sits below it in the pane. */
+.preview-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* Overlays cover the body only (not the console); no 35px bar to clear in here. */
+.preview-body > :global(.loading-overlay),
+.preview-body > .error-overlay {
+  inset: 0;
+}
+
+.preview {
+  flex: 1;
+  border: 0;
+  background: #fff;
+}
+
+/* Preview error overlay: covers the preview content on compile/runtime errors.
+   Above the loading overlay (z 5) so it wins if both are momentarily shown. */
+.error-overlay {
+  position: absolute;
+  inset: 35px 0 0 0;
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg);
+  z-index: 6;
+}
+
+.error-card {
+  border: 1px solid #e5534b;
+  border-radius: 6px;
+  background: var(--control-bg);
+  overflow: hidden;
+}
+
+.error-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(229, 83, 75, 0.12);
+  border-bottom: 1px solid #e5534b;
+  color: #e5534b;
+  font-weight: 700;
+}
+
+.error-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.error-dismiss {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.error-dismiss:hover {
+  border-color: transparent;
+}
+
+.error-message {
+  margin: 0;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--fg);
+  font: 12px/1.5 var(--mono);
+}

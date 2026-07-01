@@ -1,0 +1,44 @@
+/* Drag separators between panes. (.panes / .pane-host / #pane-* sizing stay global.) */
+
+/* 1px separators that double as drag handles. The thin line keeps the original
+   divider look; a centered grip widens the visible grab target (the library
+   expands the actual pointer hit area for the thin bar). */
+.gutter {
+  position: relative;
+  width: 1px;
+  background: var(--border);
+}
+
+.gutter-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 28px;
+  z-index: 6;
+  border-radius: 5px;
+  background: var(--bar-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition:
+    color 0.1s,
+    border-color 0.1s;
+}
+
+.gutter:hover .gutter-grip,
+.gutter:focus-visible .gutter-grip,
+.gutter:active .gutter-grip {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.gutter-grip svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  stroke: none;
+}

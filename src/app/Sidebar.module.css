@@ -1,0 +1,50 @@
+/* File-explorer sidebar chrome. The root `.pane.sidebar` styling stays global; `.root` here is
+   a module class on the same element used to scope the hover-revealed actions. #tree is global. */
+
+/* VS Code-style explorer header: uppercase title + chevron, hover-revealed icons. */
+.tree-header {
+  justify-content: space-between;
+  padding: 0 6px 0 8px;
+}
+
+.tree-title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg);
+  user-select: none;
+  overflow: hidden;
+}
+
+.tree-title .chevron {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tree-actions {
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.root:hover .tree-actions,
+.root:focus-within .tree-actions {
+  opacity: 1;
+}
+
+/* Hide the toolbar entirely while the tree is still loading (no file ops yet). */
+.tree-loading .tree-actions {
+  display: none;
+}

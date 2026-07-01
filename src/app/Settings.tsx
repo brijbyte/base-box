@@ -3,6 +3,7 @@ import { Settings as SettingsIcon } from 'lucide-react';
 import { Popover, Select, RadioGroup, Button, IconButton } from '@ui';
 import { THEMES, type Mode } from '../theme';
 import { useController, useSnapshot } from './store';
+import styles from './Settings.module.css';
 
 const MODE_OPTIONS = [
   { value: 'system', label: 'System' },
@@ -45,7 +46,7 @@ export function Settings() {
           />
         }
       >
-        <div className="settings-content">
+        <div className={styles.settingsContent}>
           <Button
             variant="soft"
             size="sm"
@@ -57,7 +58,7 @@ export function Settings() {
             Share URL
           </Button>
 
-          <label className="setting-row">
+          <label className={styles.settingRow}>
             <span>New project</span>
             <Select
               key={templateKey}
@@ -72,7 +73,7 @@ export function Settings() {
             />
           </label>
 
-          <div className="setting-row">
+          <div className={styles.settingRow}>
             <span>Mode</span>
             <RadioGroup
               options={MODE_OPTIONS}
@@ -81,7 +82,7 @@ export function Settings() {
             />
           </div>
 
-          <label className="setting-row">
+          <label className={styles.settingRow}>
             <span>Color theme</span>
             <Select
               options={themeOptions}

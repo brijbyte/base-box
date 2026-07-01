@@ -1,0 +1,145 @@
+/* Console panel chrome. The log ROWS (.console-row / .console-repeat) are injected imperatively
+   by controller.ts and stay global; this file owns everything ConsolePanel renders itself. */
+
+.console {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+/* Collapsed: only the bar shows; expanded: the log area takes a fixed slice of the pane. */
+.console.is-collapsed .console-log {
+  display: none;
+}
+
+.console-log {
+  height: 30vh;
+  min-height: 0;
+  overflow-y: auto;
+  font-family: var(
+    --mono,
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace
+  );
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* The console bar isn't a direct `.pane > .bar` child, so style it explicitly. */
+.console-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 35px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  background: var(--bar-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.console.is-collapsed .console-bar {
+  border-bottom: 0;
+}
+
+/* The title doubles as the collapse toggle (chevron rotates when open). */
+.console-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.console-toggle:hover {
+  border: 0;
+}
+
+.console-toggle .chevron {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--muted);
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+
+.console:not(.is-collapsed) .console-toggle .chevron {
+  transform: rotate(0deg);
+}
+
+.console-filters {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.console-filter {
+  padding: 1px 7px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.console-filter:hover {
+  border-color: transparent;
+  background: var(--hover-bg);
+}
+
+.console-filter.is-active {
+  color: var(--fg);
+  background: var(--hover-bg);
+}
+
+/* Count badge inside the Errors / Warnings pills; hidden when zero (empty). */
+.console-count {
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.console-count:empty {
+  display: none;
+}
+
+.console-clear {
+  flex: none;
+}
+
+/* Filter the imperatively-injected rows (global .console-row) by the container's data-filter. */
+.console-log[data-filter='error']
+  :global(.console-row):not([data-level='error']),
+.console-log[data-filter='warn'] :global(.console-row):not([data-level='warn']),
+.console-log[data-filter='info'] :global(.console-row):not([data-level='info']),
+.console-log[data-filter='log'] :global(.console-row):not([data-level='log']),
+.console-log[data-filter='debug']
+  :global(.console-row):not([data-level='debug']) {
+  display: none;
+}
+
+.console-log:empty::before {
+  content: 'No console output yet.';
+  display: block;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-style: italic;
+}

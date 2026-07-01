@@ -1,0 +1,98 @@
+/* Per-pane loading-skeleton shapes. The base `.skeleton`/`.loading-overlay` primitives are
+   global (referenced here via :global()); the sk-* shapes below are component-owned. */
+
+/* Tree skeleton: indented file rows (icon + label). */
+.sk-tree {
+  padding: 4px 0;
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+}
+
+.sk-row.indent {
+  padding-left: 22px;
+}
+
+.sk-ico {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.sk-bar {
+  height: 9px;
+}
+
+/* Editor skeleton: gutter number + code line. */
+.sk-editor {
+  padding: 8px 0;
+}
+
+.sk-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 19.5px;
+  padding: 0 10px 0 8px;
+}
+
+.sk-num {
+  width: 13px;
+  height: 9px;
+  flex: none;
+  opacity: 0.55;
+}
+
+.sk-code {
+  height: 9px;
+}
+
+/* Preview skeleton: a page-shaped block + a status/error label below. */
+.sk-preview {
+  display: flex;
+  flex-direction: column;
+}
+
+.sk-preview-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.sk-preview-body :global(.skeleton) {
+  height: 12px;
+}
+
+.sk-preview-body .sk-title {
+  height: 26px;
+  margin-bottom: 6px;
+}
+
+.sk-preview .loading-label {
+  padding: 8px 16px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Error: drop the skeleton, center the (red) message over the pane. */
+:global(.loading-overlay)[data-error] .sk-preview-body {
+  display: none;
+}
+
+:global(.loading-overlay)[data-error] .loading-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #e5534b;
+}

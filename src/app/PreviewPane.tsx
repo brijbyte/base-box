@@ -4,6 +4,7 @@ import { IconButton } from '@ui';
 import { useController, useSnapshot } from './store';
 import { PreviewSkeleton } from './Skeletons';
 import { ConsolePanel } from './ConsolePanel';
+import styles from './PreviewPane.module.css';
 
 export function PreviewPane() {
   const c = useController();
@@ -18,23 +19,26 @@ export function PreviewPane() {
 
   return (
     <div className="pane">
-      <div className="bar preview-header">
-        <span id="previewTitle">{previewTitle}</span>
+      <div className={`bar ${styles.previewHeader}`}>
+        <span id="previewTitle" className={styles.previewTitle}>
+          {previewTitle}
+        </span>
         <IconButton
           icon={RotateCw}
           variant="ghost"
           size="xs"
-          className="tool-btn"
+          className={`tool-btn ${styles.previewReload}`}
           id="previewReload"
           title="Reload preview"
           aria-label="Reload preview"
           onClick={() => c.reloadPreview()}
         />
       </div>
-      <div className="preview-body">
+      <div className={styles.previewBody}>
         {/* src is owned by the controller (refreshPreview); never set in JSX. */}
         <iframe
           id="preview"
+          className={styles.preview}
           ref={iframeRef}
           sandbox="allow-scripts allow-same-origin"
         />
@@ -44,15 +48,15 @@ export function PreviewPane() {
           error={preview.error}
         />
         {previewError && (
-          <div id="previewError" className="error-overlay">
-            <div className="error-card">
-              <div className="error-head">
-                <span id="errorTitle" className="error-title">
+          <div id="previewError" className={styles.errorOverlay}>
+            <div className={styles.errorCard}>
+              <div className={styles.errorHead}>
+                <span id="errorTitle" className={styles.errorTitle}>
                   {previewError.title}
                 </span>
                 <button
                   id="errorDismiss"
-                  className="error-dismiss"
+                  className={styles.errorDismiss}
                   title="Dismiss"
                   aria-label="Dismiss error"
                   onClick={() => c.clearPreviewError()}
@@ -60,7 +64,7 @@ export function PreviewPane() {
                   ×
                 </button>
               </div>
-              <pre id="errorMessage" className="error-message">
+              <pre id="errorMessage" className={styles.errorMessage}>
                 {previewError.message}
               </pre>
             </div>

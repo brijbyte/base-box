@@ -1,5 +1,6 @@
 import { useSnapshot } from './store';
 import { Settings } from './Settings';
+import styles from './StatusBar.module.css';
 
 export function StatusBar() {
   const { status, editorStatus: s } = useSnapshot();
@@ -12,11 +13,14 @@ export function StatusBar() {
     : '';
 
   return (
-    <footer id="statusbar">
-      <span id="status">{status}</span>
-      <span className="status-info">
+    <footer id="statusbar" className={styles.statusbar}>
+      <span id="status" className={styles.status}>
+        {status}
+      </span>
+      <span className={styles.statusInfo}>
         <span
           id="diagnostics"
+          className={styles.diagnostics}
           title="Errors and warnings"
           data-errors={hasErrors ? '' : undefined}
         >

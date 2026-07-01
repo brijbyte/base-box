@@ -4,6 +4,7 @@ import { Toolbar, IconButton } from '@ui';
 import { useController, useSnapshot } from './store';
 import { TreeSkeleton } from './Skeletons';
 import { lazyShell } from './lazyShell';
+import styles from './Sidebar.module.css';
 
 // The tree pulls in the @pierre/trees bundle; load it lazily. The TreeSkeleton below
 // (gated on `treeReady`) already covers both the chunk-load and mount phases.
@@ -14,13 +15,17 @@ export function Sidebar() {
   const { treeReady } = useSnapshot();
 
   return (
-    <div className={`pane sidebar${treeReady ? '' : ' tree-loading'}`}>
-      <div className="bar tree-header">
-        <span className="tree-title">
-          <File className="chevron" size={16} aria-hidden />
+    <div
+      className={`pane sidebar ${styles.root}${
+        treeReady ? '' : ` ${styles.treeLoading}`
+      }`}
+    >
+      <div className={`bar ${styles.treeHeader}`}>
+        <span className={styles.treeTitle}>
+          <File className={styles.chevron} size={16} aria-hidden />
           Files
         </span>
-        <Toolbar.Root className="tree-actions" aria-label="File actions">
+        <Toolbar.Root className={styles.treeActions} aria-label="File actions">
           <Toolbar.Button
             render={
               <IconButton

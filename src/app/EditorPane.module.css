@@ -1,0 +1,8 @@
+/* CodeMirror mount host. The #editor id stays on the element (tests + the global
+   `#editor .cm-*` rules); this class carries its box styling. */
+.editor-mount {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}

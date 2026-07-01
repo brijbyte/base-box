@@ -9,6 +9,7 @@ import {
 } from 'react-resizable-panels';
 import type { Controller } from './controller';
 import { ControllerContext } from './store';
+import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
 import { PreviewPane } from './PreviewPane';
 import { StatusBar } from './StatusBar';
@@ -39,8 +40,8 @@ const useIsoLayoutEffect =
 /** A 1px drag separator with a centered grip (matches the old gutter look). */
 function Gutter({ id, label }: { id: string; label: string }) {
   return (
-    <Separator id={id} className="gutter" aria-label={label}>
-      <span className="gutter-grip" aria-hidden="true">
+    <Separator id={id} className={styles.gutter} aria-label={label}>
+      <span className={styles.gutterGrip} aria-hidden="true">
         <GripVertical size={16} />
       </span>
     </Separator>

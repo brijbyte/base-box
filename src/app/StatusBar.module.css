@@ -1,0 +1,48 @@
+/* Bottom status bar. The #statusbar id stays on the element (tests + the global
+   `#statusbar .settings ...` agentic-ui integration rules). */
+
+/* Spans all columns, fixed height. Message on the left, editor info on the right. */
+.statusbar {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 10px;
+  /* The theme's prominent color: dedicated --statusbar-bg if a theme sets one, else accent. */
+  background: var(--statusbar-bg, var(--accent));
+  /* White by default; themes with a light status bar (yellow/green/etc.) override
+     with a dark --statusbar-fg so the text stays legible. */
+  color: var(--statusbar-fg, #ffffff);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  user-select: none;
+  /* visible so the settings popover can anchor above the bar without clipping */
+  overflow: visible;
+}
+
+.status {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: none;
+}
+
+.status-info span {
+  white-space: nowrap;
+}
+
+.status-info span:empty {
+  display: none;
+}
+
+.diagnostics[data-errors] {
+  font-weight: 700;
+}

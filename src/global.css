@@ -1,0 +1,450 @@
+/*
+  Global stylesheet: only genuinely cross-cutting rules live here. Component-specific styles
+  are co-located in `*.module.css` next to each component. What stays global:
+   - the theme system (CSS variables per mode) — must cascade to everything incl. shadow roots;
+   - reset + app roots (#root, #app);
+   - pane sizing (#pane-*, coupled to index.html's head script + hydration);
+   - shared pane/skeleton primitives used by several components;
+   - agentic-ui integration (styles library-rendered .icon-btn/.tool-btn/[role=option]);
+   - CodeMirror rules (target CodeMirror's own global .cm-* classes);
+   - console log rows (injected imperatively by controller.ts — see ConsolePanel.module.css).
+*/
+
+/*
+  Single source of truth: one VS Code palette per mode. These custom
+  properties drive the app chrome, the CodeMirror theme (--cm- and --tok-
+  vars, see editor-theme.ts) and the file tree (--trees- override vars,
+  which cascade into its shadow root). Flip `data-theme` to re-theme all.
+  VS Code "Light Modern" / "Dark Modern" + classic Light+/Dark+ tokens.
+*/
+/* Light = the default. The dark rules below are guarded with
+   :not([data-theme='light']) so an explicit light choice always wins. */
+:root {
+  color-scheme: light;
+  /* Monospace stack mirroring VS Code's editor default (OS native first). */
+  --mono:
+    ui-monospace, 'SF Mono', 'SFMono-Regular', 'Cascadia Code', 'Cascadia Mono',
+    Menlo, Consolas, 'Liberation Mono', monospace;
+  /* chrome */
+  --bg: #ffffff;
+  --fg: #3b3b3b;
+  --header-bg: #f8f8f8;
+  --header-fg: #3b3b3b;
+  --bar-bg: #f8f8f8;
+  --border: #e5e5e5;
+  --muted: #6e7681;
+  --control-bg: #ffffff;
+  --control-fg: #3b3b3b;
+  --accent: #005fb8;
+  --sidebar-bg: #f8f8f8;
+  --selected-bg: #e4e6f1;
+  --hover-bg: #f0f0f0;
+  --skeleton-sheen: rgba(255, 255, 255, 0.65);
+  /* editor */
+  --cm-bg: #ffffff;
+  --cm-fg: #3b3b3b;
+  --cm-cursor: #005fb8;
+  --cm-selection: #add6ff;
+  /* Translucent so it doesn't paint over the selection layer (opaque hides it). */
+  --cm-active-line: rgba(0, 0, 0, 0.05);
+  --cm-gutter-fg: #6e7681;
+  /* syntax tokens (Light+) */
+  --tok-comment: #008000;
+  --tok-keyword: #0000ff;
+  --tok-string: #a31515;
+  --tok-number: #098658;
+  --tok-function: #795e26;
+  --tok-type: #267f99;
+  --tok-variable: #001080;
+  --tok-operator: #3b3b3b;
+}
+
+/* Theming = MODE (data-theme: light | dark | unset=system) × DARK COLOR THEME
+   (data-dark-theme: default | dimmed). The bundled light (:root) and dark (below) palettes
+   are the always-applied BASE layers for each appearance — so first paint is never the wrong
+   appearance, even before a lazily-loaded color theme arrives. A non-default color theme
+   (e.g. Dark Dimmed, in src/themes/) is an OVERRIDE layer: its selector carries an extra
+   [data-dark-theme='…'] attribute, giving it higher specificity so it wins over this base
+   whenever it's selected + loaded. This is why default themes must stay bundled. */
+
+/* Dark — DEFAULT/base palette (VS Code Dark+). Always active under system-dark and explicit
+   dark; a selected non-default dark theme overrides it with higher specificity. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #1f1f1f;
+    --fg: #cccccc;
+    --header-bg: #181818;
+    --header-fg: #cccccc;
+    --bar-bg: #181818;
+    --border: #2b2b2b;
+    --muted: #9d9d9d;
+    --control-bg: #313131;
+    --control-fg: #cccccc;
+    --accent: #0078d4;
+    --sidebar-bg: #181818;
+    --selected-bg: #37373d;
+    --hover-bg: #2a2d2e;
+    --skeleton-sheen: rgba(255, 255, 255, 0.07);
+    --cm-bg: #1f1f1f;
+    --cm-fg: #d4d4d4;
+    --cm-cursor: #aeafad;
+    --cm-selection: #2f5e9e;
+    --cm-active-line: rgba(255, 255, 255, 0.06);
+    --cm-gutter-fg: #6e7681;
+    --tok-comment: #6a9955;
+    --tok-keyword: #569cd6;
+    --tok-string: #ce9178;
+    --tok-number: #b5cea8;
+    --tok-function: #dcdcaa;
+    --tok-type: #4ec9b0;
+    --tok-variable: #9cdcfe;
+    --tok-operator: #d4d4d4;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1f1f1f;
+  --fg: #cccccc;
+  --header-bg: #181818;
+  --header-fg: #cccccc;
+  --bar-bg: #181818;
+  --border: #2b2b2b;
+  --muted: #9d9d9d;
+  --control-bg: #313131;
+  --control-fg: #cccccc;
+  --accent: #0078d4;
+  --sidebar-bg: #181818;
+  --selected-bg: #37373d;
+  --hover-bg: #2a2d2e;
+  --skeleton-sheen: rgba(255, 255, 255, 0.07);
+  --cm-bg: #1f1f1f;
+  --cm-fg: #d4d4d4;
+  --cm-cursor: #aeafad;
+  --cm-selection: #2f5e9e;
+  --cm-active-line: rgba(255, 255, 255, 0.06);
+  --cm-gutter-fg: #6e7681;
+  --tok-comment: #6a9955;
+  --tok-keyword: #569cd6;
+  --tok-string: #ce9178;
+  --tok-number: #b5cea8;
+  --tok-function: #dcdcaa;
+  --tok-type: #4ec9b0;
+  --tok-variable: #9cdcfe;
+  --tok-operator: #d4d4d4;
+}
+
+/* Non-default color themes (e.g. "GitHub Dark Dimmed") live in their own files under
+   src/themes/ and are imported lazily on first use — see THEMES in theme.ts. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  /* Full-screen app shell: the page itself never scrolls — each pane scrolls its
+     own content, and the status bar stays pinned. */
+  overflow: hidden;
+  font: 14px/1.4 var(--mono);
+  background: var(--bg);
+  color: var(--fg);
+  /* Grayscale antialiasing — the crisp look VS Code (Chromium) renders with. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* React mounts here; fill the viewport so #app's height:100% resolves and the
+   status bar stays pinned at the bottom (panes scroll their own content). */
+#root {
+  height: 100%;
+}
+
+#app {
+  /* Rows: the resizable pane group (react-resizable-panels) over a pinned status bar. */
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100%;
+}
+
+/* The horizontal Panel group fills the top row; its children scroll their own content. */
+.panes {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Panel content host: let the wrapped `.pane` fill the panel (the library sizes the panel). */
+.pane-host {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Restore persisted pane sizes before hydration. index.html's head script sets `--fg-<id>`
+   from localStorage on <html>; these rules apply them before first paint, matching react-
+   resizable-panels' runtime model (flex-grow:<n>; flex-basis:0). flex-grow stays non-!important
+   so the library's inline value wins once it takes over (and on drag); flex-basis is !important
+   to beat the SSR panel's inline `flex-basis:<percent>%`. min/max-width mirror each Panel's
+   minSize/maxSize so a layout carried across a viewport change can't overshoot then snap back. */
+#pane-sidebar {
+  flex-grow: var(--fg-pane-sidebar, 18);
+  flex-basis: 0 !important;
+  min-width: 120px !important;
+  max-width: 360px !important;
+}
+#pane-editor {
+  flex-grow: var(--fg-pane-editor, 41);
+  flex-basis: 0 !important;
+  min-width: 120px !important;
+}
+#pane-preview {
+  flex-grow: var(--fg-pane-preview, 41);
+  flex-basis: 0 !important;
+  min-width: 120px !important;
+}
+.pane-host > .pane {
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- Shared pane primitives (used across the editor / preview / sidebar panes) --- */
+.pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pane > .bar {
+  height: 35px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  background: var(--bar-bg);
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pane.sidebar {
+  background: var(--sidebar-bg);
+}
+
+/* --- Skeleton primitives (shared; component-specific sk-* live in Skeletons.module.css) --- */
+/* Per-pane loading overlay: covers the content area (below the 35px bar). */
+.loading-overlay {
+  position: absolute;
+  inset: 35px 0 0 0;
+  background: var(--bg);
+  overflow: hidden;
+  z-index: 5;
+}
+
+.pane.sidebar .loading-overlay {
+  background: var(--sidebar-bg);
+}
+
+.loading-overlay[hidden] {
+  display: none;
+}
+
+/* Shimmer skeleton block: a muted bar with a sheen sweeping across it. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-sheen),
+    transparent
+  );
+  animation: shimmer 1.3s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation-duration: 3s;
+  }
+}
+
+/* --- Icon buttons: agentic-ui's Button/IconButton render the .icon-btn class --- */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--hover-bg);
+  border-color: transparent;
+}
+
+.icon-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Filename label in the editor bar — global because it's rendered by both EditorPane and its
+   Suspense fallback (Skeletons.EditorPaneFallback) and keyed by #filename in tests. */
+#filename {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* File tree host: @pierre/trees renders this via an `id` prop; the --trees-* overrides cascade
+   into its shadow root, so this must stay a global id rule (not a hashed module class). */
+#tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  /* VS Code-minimal file tree: full-bleed rows, no inset, square, compact.
+     These cascade through @pierre/trees' shadow root. */
+  --trees-bg-override: var(--sidebar-bg);
+  --trees-fg-override: var(--fg);
+  --trees-fg-muted-override: var(--muted);
+  --trees-accent-override: var(--accent);
+  --trees-border-color-override: var(--border);
+  --trees-selected-bg-override: var(--selected-bg);
+  --trees-selected-fg-override: var(--fg);
+  --trees-selected-focused-border-color-override: var(--accent);
+  --trees-focus-ring-color-override: var(--accent);
+  --trees-focus-ring-width-override: 1px;
+  --trees-focus-ring-offset-override: -1px;
+  --trees-theme-list-hover-bg: var(--hover-bg);
+  --trees-item-height: 22px;
+  --trees-border-radius-override: 0px;
+  --trees-item-margin-x-override: 0px;
+  --trees-padding-inline-override: 0px;
+}
+
+/* --- CodeMirror: the editor mounts .cm-* elements (CodeMirror's own global classes) --- */
+#editor .cm-editor {
+  height: 100%;
+}
+
+#editor .cm-scroller {
+  font: 13px/1.5 var(--mono);
+  font-variant-ligatures: none; /* match VS Code's default (fontLigatures: off) */
+}
+
+/* --- agentic-ui chrome integration --- */
+/* Settings gear wrapper pinned in the status bar; anchors the popover above the bar. */
+.settings {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Gear sits in the status bar, so it inherits the bar's foreground color. */
+#statusbar .settings .icon-btn {
+  color: inherit;
+  width: 20px;
+  height: 20px;
+}
+
+/* Compact icon buttons (agentic ghost Buttons) used across the bars/toolbar. */
+.tool-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  padding: 0;
+}
+
+#statusbar .settings .tool-btn {
+  color: inherit;
+}
+
+/* Select dropdown highlight: agentic-ui fills the highlighted item with --color-accent
+   and white text, but some color themes use a LIGHT --accent (e.g. Night Owl), so
+   white-on-accent fails contrast. Use a neutral tint + primary text (VS Code-style) so
+   the label stays legible under every theme; keep the checkmark in the accent color.
+   Unlayered rules beat agentic-ui's @layer components regardless of specificity. */
+[role='option']:hover,
+[role='option'][data-highlighted],
+[role='option'][data-selected] {
+  background-color: var(--selected-bg);
+  color: var(--fg);
+}
+
+[role='option'] svg,
+[role='option'][data-highlighted] svg {
+  color: var(--accent);
+}
+
+/* --- Console log rows: injected imperatively by controller.ts into ConsolePanel's log
+   container, so they can't use module classes. The console chrome lives in
+   ConsolePanel.module.css; the row visuals stay global here. --- */
+.console-row {
+  display: flex;
+  gap: 8px;
+  padding: 2px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--fg);
+}
+
+.console-row[data-level='error'] {
+  color: #f85149;
+  background: color-mix(in srgb, #f85149 9%, transparent);
+}
+
+.console-row[data-level='warn'] {
+  color: #d29922;
+  background: color-mix(in srgb, #d29922 9%, transparent);
+}
+
+.console-row[data-level='debug'] {
+  color: var(--muted);
+}
+
+/* Repeat counter (devtools-style) appended to coalesced identical consecutive lines. */
+.console-repeat {
+  align-self: center;
+  flex: none;
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--hover-bg);
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
+}

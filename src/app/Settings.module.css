@@ -1,0 +1,20 @@
+/* Settings popover body. The `.settings` wrapper stays global (it anchors the gear in the
+   status bar and is targeted by the global `#statusbar .settings ...` integration rules). */
+
+/* A stacked column of labeled control rows. */
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 200px;
+}
+
+/* A labeled control row inside the popover (e.g. "Mode  [select]"). */
+.settings-content .setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--fg);
+}
