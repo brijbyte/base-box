@@ -162,6 +162,7 @@ body {
    status bar stays pinned at the bottom (panes scroll their own content). */
 #root {
   height: 100%;
+  isolation: isolate;
 }
 
 #app {
