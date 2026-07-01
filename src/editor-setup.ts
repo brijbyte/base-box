@@ -20,7 +20,12 @@ import {
   bracketMatching,
   foldKeymap,
 } from '@codemirror/language';
-import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import {
+  history,
+  defaultKeymap,
+  historyKeymap,
+  indentWithTab,
+} from '@codemirror/commands';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import {
   closeBrackets,
@@ -70,5 +75,7 @@ export const basicSetup: Extension = [
     ...foldKeymap,
     ...completionKeymap,
     ...lintKeymap,
+    // Tab indents inside the editor instead of moving focus out (Esc first to tab away).
+    indentWithTab,
   ]),
 ];
