@@ -108,3 +108,38 @@ test('opening a .vue file highlights it (lang-vue) + labels it Vue', async ({
     page.locator('#editor .cm-content .cm-line span').first()
   ).toBeVisible({ timeout: 10000 });
 });
+
+// The Vue language server (Volar's Vue plugin projecting .vue → virtual TS, checked by the
+// TS service) boots a real TS engine + types from a CDN, so it gets a long timeout.
+const LSP_TIMEOUT = 30000;
+
+test('Vue LSP: reports a type error inside <script setup>', async ({
+  page,
+}) => {
+  const files = await encodeFiles({
+    'package.json': JSON.stringify({ dependencies: { vue: '3.5.13' } }),
+    'index.html': `<!doctype html><html><head></head><body><div id="app"></div>
+<script type="module" src="./src/main.js"></script></body></html>`,
+    'src/main.js': `import { createApp } from "vue";
+import App from "./App.vue";
+createApp(App).mount("#app");`,
+    'src/App.vue': `<script setup lang="ts">
+const bad: number = 'not a number';
+</script>
+<template>
+  <div>hello</div>
+</template>
+`,
+  });
+  await page.goto(`/?files=${files}&file=src/App.vue`);
+  await page.locator('#editor .cm-content').click();
+
+  // Volar pushes publishDiagnostics for the virtual TS → CM renders an error squiggle.
+  const error = page.locator('#editor .cm-lintRange-error').first();
+  await expect(error).toBeVisible({ timeout: LSP_TIMEOUT });
+  await error.hover();
+  await expect(page.locator('.cm-tooltip-lint')).toContainText(
+    "Type 'string' is not assignable to type 'number'",
+    { timeout: LSP_TIMEOUT }
+  );
+});

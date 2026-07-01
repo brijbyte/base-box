@@ -7,7 +7,7 @@ import type { FileMap } from '../types';
 import type { TsWorkerApi } from './ts-worker';
 import { ext, fileUri, lspClientOverPort, type LspClient } from './bridge';
 
-const TS_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs']);
+const TS_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'vue']);
 
 /** Whether a file gets TS/JS language-server features. */
 export const lspSupportsPath = (p: string) => TS_EXTS.has(ext(p));
@@ -21,6 +21,8 @@ function languageId(path: string): string {
       return 'typescript';
     case 'jsx':
       return 'javascriptreact';
+    case 'vue':
+      return 'vue';
     default:
       return 'javascript';
   }

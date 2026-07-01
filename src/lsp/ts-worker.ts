@@ -19,6 +19,10 @@ import {
   loadTsdkByUrl,
 } from '@volar/language-server/browser';
 import { create as createTsServices } from 'volar-service-typescript';
+import {
+  createVueLanguagePlugin,
+  getDefaultCompilerOptions as getVueCompilerOptions,
+} from '@vue/language-core';
 import { createNpmFileSystem } from '@volar/jsdelivr';
 import type { FileSystem, FileType } from '@volar/language-service';
 import { URI } from 'vscode-uri';
@@ -172,11 +176,33 @@ function startLsp(port: MessagePort) {
       undefined
     );
     server.fileSystem.install('file', compositeFs(npmFs));
+    // The Vue plugin needs a ts.CompilerOptions synchronously, but the project's own
+    // options aren't resolved yet inside the `create` callback (projectHost reads a
+    // not-yet-initialized commandLine). Feed it our default tsconfig, matching the TS project.
+    const { options: vueTsOptions } =
+      tsdk.typescript.convertCompilerOptionsFromJson(
+        JSON.parse(DEFAULT_TSCONFIG).compilerOptions,
+        '/'
+      );
     return server.initialize(
       params,
-      createTypeScriptProject(tsdk.typescript, tsdk.diagnosticMessages, () => ({
-        languagePlugins: [],
-      })),
+      createTypeScriptProject(
+        tsdk.typescript,
+        tsdk.diagnosticMessages,
+        // Register Vue's Volar plugin so `.vue` SFCs are projected to virtual TS: the TS
+        // service then type-checks <script>/<script setup> and template expressions, and
+        // maps diagnostics/hover/completion back to SFC positions.
+        ({ uriConverter }) => ({
+          languagePlugins: [
+            createVueLanguagePlugin(
+              tsdk.typescript,
+              vueTsOptions,
+              getVueCompilerOptions(),
+              uriConverter.asFileName
+            ),
+          ],
+        })
+      ),
       createTsServices(tsdk.typescript)
     );
   });

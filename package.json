@@ -43,6 +43,7 @@
     "@volar/jsdelivr": "^2.4.28",
     "@volar/language-server": "^2.4.28",
     "@volar/language-service": "^2.4.28",
+    "@vue/language-core": "^2.2.12",
     "buffer": "^6.0.3",
     "codemirror": "^6.0.2",
     "comlink": "^4.4.2",

@@ -41,7 +41,7 @@ const fs = new MemFS((await filesFromUrl()) ?? SAMPLE);
 // module and its worker load lazily on the first matching file opened — a project that only
 // touches HTML/CSS never pulls the (CDN-heavy) TS server, and vice-versa.
 const extOf = (p: string) => p.slice(p.lastIndexOf('.') + 1).toLowerCase();
-const TS_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs']);
+const TS_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'vue']);
 const CSS_EXTS = new Set(['css', 'scss', 'less']);
 
 /** A lazily-created LSP client: imported + booted on first use, then memoized. */
